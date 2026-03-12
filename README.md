@@ -1,241 +1,135 @@
-# ⚡ VibeStock — Rust-Powered Inventory Management System
+# 📦 VibeStock — Modern Inventory Management System
 
-> **MCA Final Year Project** — Full-stack real-time inventory system built with Rust, Tauri, and Kotlin.
+**VibeStock** is a fully-featured, cross-platform inventory management system built as an MCA Final Year Project. It features a high-performance Rust backend, a beautiful glassmorphism desktop application, and a Kotlin Android barcode scanner.
 
-[![Rust](https://img.shields.io/badge/Rust-1.78+-orange?logo=rust)](https://www.rust-lang.org/)
-[![Axum](https://img.shields.io/badge/Axum-0.7-blue?logo=rust)](https://github.com/tokio-rs/axum)
-[![Tauri](https://img.shields.io/badge/Tauri-v2-purple?logo=tauri)](https://tauri.app/)
-[![Svelte](https://img.shields.io/badge/Svelte-4-ff3e00?logo=svelte)](https://svelte.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791?logo=postgresql)](https://postgresql.org/)
-[![Kotlin](https://img.shields.io/badge/Kotlin-Android-7f52ff?logo=kotlin)](https://kotlinlang.org/)
-
----
-
-## 📐 Architecture
-
-```
-vibestock/
-├── shared/          # Rust shared crate — domain models, DTOs, error types
-├── api/             # Rust Axum backend — REST API + WebSockets
-│   └── migrations/  # PostgreSQL migrations & seed data
-├── desktop/         # Tauri v2 desktop app — Svelte glassmorphism UI
-│   ├── src/         # Svelte pages & components
-│   └── src-tauri/   # Rust Tauri backend (Tauri commands)
-└── android/         # Kotlin mobile scanner — CameraX + ML Kit + Retrofit
-```
-
-```
-┌──────────────┐   HTTP/WS    ┌─────────────────┐    SQLx     ┌──────────────┐
-│  Tauri App   │◄────────────►│  Axum API        │◄───────────►│  PostgreSQL  │
-│  (Svelte UI) │              │  :3000           │             │  vibestock   │
-└──────────────┘              └─────────────────┘             └──────────────┘
-       ▲                              ▲
-       │ WebSocket (real-time)        │ HTTP REST
-       │ LowStock / StockUpdated      │
-       │                       ┌──────────────┐
-       └───────────────────────│ Kotlin App   │
-                               │ CameraX Scan │
-                               └──────────────┘
-```
+![VibeStock Overview](https://img.shields.io/badge/Status-Complete-success?style=for-the-badge)
+![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
+![Tauri](https://img.shields.io/badge/Tauri-FFC131?style=for-the-badge&logo=Tauri&logoColor=white)
+![Svelte](https://img.shields.io/badge/Svelte-4A4A55?style=for-the-badge&logo=svelte&logoColor=FF3E00)
+![Kotlin](https://img.shields.io/badge/Kotlin-0095D5?style=for-the-badge&logo=kotlin&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
 
 ---
 
-## 🚀 Features
+## 🏗️ Architecture & Tech Stack
 
-| Feature | Technology |
-|---|---|
-| Blazing-fast REST API | Rust + Axum + Tower |
-| Real-time stock alerts | Axum WebSockets + broadcast channel |
-| JWT authentication | `jsonwebtoken` + bcrypt |
-| Database migrations | SQLx + PostgreSQL |
-| Glassmorphism desktop UI | Tauri v2 + Svelte |
-| Barcode scanning | CameraX + ML Kit (on-device) |
-| Mobile stock updates | Kotlin + Retrofit → Rust API |
-| Full audit log | Immutable stock movements table |
+VibeStock uses a modern, high-performance tech stack divided into three main clients connected to a central API.
 
----
+### 1. Backend API (`api/` and `shared/`)
+* **Language**: Rust
+* **Framework**: Axum (high-performance async web framework)
+* **Database**: PostgreSQL (with standard hex-UUIDs)
+* **ORM / Queries**: SQLx (async, purely Rust SQL toolkit)
+* **Real-time**: WebSockets (Axum Broadcast channels)
+* **Security**: JWT Authentication + Bcrypt password hashing
 
-## 📦 Project Structure
+### 2. Desktop Application (`desktop/`)
+* **Framework**: Tauri v2 (Rust-backed lightweight desktop apps)
+* **Frontend UI**: Svelte + Vite
+* **Design System**: Custom CSS Glassmorphism (Vibrant gradients, frosted glass, smooth animations)
+* **Features**: Live dashboard with 6 KPIs, real-time WebSocket stock alerts, CRUD modules for products and suppliers.
 
-### `shared/` — Domain Models
-- `models.rs` — `Product`, `Category`, `Supplier`, `StockMovement`, `User`
-- `dto.rs`    — Request/response DTOs, `PaginatedResponse<T>`, `WsEvent`
-- `errors.rs` — `AppError` with `IntoResponse` impl for clean JSON errors
-
-### `api/` — Axum Backend
-- **Auth**: `POST /api/auth/login` → JWT, bcrypt password hashing
-- **Products**: Full CRUD + barcode lookup + paginated search
-- **Categories**: Full CRUD
-- **Suppliers**: Full CRUD
-- **Stock Movements**: Create (atomically updates product stock) + paginated list
-- **Dashboard**: `/api/dashboard/stats` — 6 aggregated KPIs
-- **WebSocket**: `/api/ws` — broadcasts `StockUpdated`, `LowStock` events
-
-### `desktop/` — Tauri v2 + Svelte
-- **Login** — animated blob background, JWT auth
-- **Dashboard** — 6 KPI cards, recent movements table, live WS refresh
-- **Products** — searchable paginated table, Add/Edit modal with all fields
-- **Suppliers** — management table with modal
-- **Stock Movements** — immutable audit log, new movement modal with type hint
-
-### `android/` — Kotlin Scanner
-- **MainActivity** — JWT login, SharedPreferences token persistence
-- **ScannerActivity** — CameraX + ML Kit EAN-13/QR detection
-- **ApiClient.kt** — Retrofit + Moshi models mirroring Rust DTOs
+### 3. Mobile Scanner (`android/`)
+* **Language**: Kotlin (Android Native)
+* **Scanning SDK**: Google ML Kit + AndroidX CameraX (fast, on-device barcode parsing)
+* **Networking**: Retrofit 2 + Moshi (API client)
+* **Features**: Scan barcodes instantly, query stock, submit stock movements (IN/OUT/ADJUSTMENT).
 
 ---
 
-## ⚙️ Prerequisites
+## ✨ Core Features
 
-| Tool | Version | Install |
-|---|---|---|
-| Rust | 1.78+ | [rustup.rs](https://rustup.rs/) |
-| PostgreSQL | 15+ | [postgresql.org](https://postgresql.org/) |
-| SQLx CLI | latest | `cargo install sqlx-cli` |
-| Node.js | 20+ | [nodejs.org](https://nodejs.org/) |
-| Tauri CLI | v2 | `cargo install tauri-cli` |
-| Android Studio | 2024+ | [developer.android.com](https://developer.android.com/studio) |
+* **🔐 Role-Based Access**: Secure JWT logins for Admins, Managers, and Staff.
+* **📦 Product Management**: Full CRUD for products, categories, and suppliers.
+* **🔄 Immutable Stock Log**: All stock changes (IN, OUT, ADJUSTMENT) are recorded as immutable movements for perfect auditing.
+* **⚡ Real-time Alerts**: When a stock movement occurs, WebSockets instantly broadcast the new stock levels and Low Stock alerts to all connected desktop clients without a page refresh.
+* **📱 Mobile Integration**: Factory staff can use Android phones to scan barcodes and update inventory instantly over the local network.
 
 ---
 
-## 🗄️ Database Setup
+## 🚀 Setup & Installation
 
+### Prerequisites
+1. **Rust**: Installed via `rustup` (v1.75+)
+2. **Node.js**: Installed (v18+)
+3. **PostgreSQL**: Installed (v15+) and running
+4. **Android Studio**: (Optional) For the mobile scanner app.
+
+---
+
+### Step 1: Database Setup
+1. Open PostgreSQL (`psql` or pgAdmin).
+2. Create an empty database:
+   ```sql
+   CREATE DATABASE vibestock;
+   ```
+3. Copy the environment config template:
+   ```bash
+   cp .env.example .env
+   ```
+4. Open `.env` and configure your `DATABASE_URL` with your PG credentials.
+   *(Example: `postgres://postgres:password@localhost:5432/vibestock`)*
+
+### Step 2: Running the API Server
+The API manages the database migrations automatically on startup.
 ```bash
-# 1. Create the database
-psql -U postgres -c "CREATE DATABASE vibestock;"
-
-# 2. Copy and edit environment file
-cp .env.example .env
-
-# 3. Run migrations + seed data
-cd api
-cargo sqlx migrate run
-
-# Or use the SQLx CLI directly:
-sqlx migrate run --database-url "postgres://postgres:postgres@localhost:5432/vibestock"
-```
-
-**Default seed credentials:**
-
-| Username | Password | Role |
-|---|---|---|
-| `admin` | `Password@123` | Admin |
-| `manager` | `Password@123` | Manager |
-| `staff1` | `Password@123` | Staff |
-
----
-
-## 🦀 Running the API
-
-```bash
-cd d:/project/vibestock
-
-# Development (with hot-reload via cargo-watch)
-cargo watch -x "run -p api"
-
-# Or directly
+# From the project root directory
 cargo run -p api
-
-# API docs (manual):
-# GET  http://localhost:3000/api/health
-# POST http://localhost:3000/api/auth/login
-# WS   ws://localhost:3000/api/ws
 ```
+*(You will see "✅ Migrations applied" and the server will start on `http://localhost:3000`)*
 
----
+**Demo Accounts (Password for all is `Password@123`):**
+* `admin`
+* `manager`
+* `staff1`
 
-## 🖥️ Running the Desktop App
-
+### Step 3: Running the Desktop Application
+The desktop app requires the API to be running first.
 ```bash
+# Open a new terminal
 cd desktop
 
 # Install frontend dependencies
 npm install
 
-# Development mode (launches Tauri window + Vite dev server)
+# Start the Tauri application
 cargo tauri dev
+# or alternatively: npx @tauri-apps/cli dev
+```
 
-# Production build
-cargo tauri build
+### Step 4: Running the Android Scanner
+1. Open the `android/` folder in **Android Studio**.
+2. Wait for Gradle to sync dependencies.
+3. Open `android/app/build.gradle.kts`.
+4. Look for the `API_BASE_URL` config variable:
+   - If using the **Android Emulator**, keep it as `"http://10.0.2.2:3000"`.
+   - If using a **Physical Android Phone**, change it to your computer's local Wi-Fi IP address (e.g., `"http://192.168.1.55:3000"`).
+5. Press **Run** (▶️) to install the app on your device.
+
+---
+
+## 📁 Project Structure
+
+```text
+vibestock/
+├── Cargo.toml                 # Workspace root config
+├── .env                       # Environment variables (DB, JWT secret)
+│
+├── shared/                    # [Rust] Shared structs and DTOs
+│   ├── src/models.rs          # DB models (Product, StockMovement, etc)
+│   └── src/errors.rs          # Unified Application Errors
+│
+├── api/                       # [Rust] Axum Backend
+│   ├── migrations/            # SQLx database schema & seed data
+│   └── src/                   # Route handlers, auth, ws, and db setup
+│
+├── desktop/                   # [Rust+Svelte] Tauri App
+│   ├── src-tauri/             # Tauri backend / capabilities / icons
+│   └── src/                   # Svelte UI, Routes, Glassmorphism CSS
+│
+└── android/                   # [Kotlin] Mobile Scanner App
+    └── app/src/main/java/     # CameraX, ML Kit, Retrofit logic
 ```
 
 ---
-
-## 📱 Running the Android Scanner
-
-1. Open `android/` in Android Studio.
-2. Edit `app/build.gradle.kts` → set `API_BASE_URL` to your machine's LAN IP:
-   ```kotlin
-   buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.x:3000\"")
-   ```
-3. Connect your Android device (API 26+) or use the emulator.
-4. Click **Run** ▶️.
-5. Log in with `admin / Password@123`, point camera at any EAN-13 barcode.
-
----
-
-## 🔌 API Reference
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/auth/login` | ✗ | Get JWT token |
-| `GET`  | `/api/health` | ✗ | Health check |
-| `GET`  | `/api/dashboard/stats` | ✓ | 6 KPI aggregates |
-| `GET`  | `/api/products` | ✓ | List (paginated, searchable) |
-| `POST` | `/api/products` | ✓ | Create product |
-| `GET`  | `/api/products/:id` | ✓ | Get by ID |
-| `GET`  | `/api/products/barcode/:code` | ✓ | Barcode lookup (Android) |
-| `PUT`  | `/api/products/:id` | ✓ | Update product |
-| `DELETE` | `/api/products/:id` | ✓ | Soft-delete |
-| `GET`  | `/api/categories` | ✓ | List categories |
-| `POST` | `/api/categories` | ✓ | Create category |
-| `GET`  | `/api/suppliers` | ✓ | List suppliers |
-| `POST` | `/api/suppliers` | ✓ | Create supplier |
-| `GET`  | `/api/movements` | ✓ | Paginated audit log |
-| `POST` | `/api/movements` | ✓ | Record stock movement |
-| `WS`   | `/api/ws` | ✗ | Real-time event stream |
-
----
-
-## 🧪 WebSocket Events
-
-```json
-// Stock updated (any movement recorded)
-{ "event": "StockUpdated", "payload": { "product_id": "...", "product_name": "Laptop", "new_quantity": 23 } }
-
-// Low stock warning (quantity ≤ reorder_level)
-{ "event": "LowStock", "payload": { "product_id": "...", "product_name": "Webcam", "quantity": 3, "reorder_level": 5 } }
-```
-
----
-
-## 📊 Database Schema
-
-```sql
-users            -- JWT auth, role: admin | manager | staff
-categories       -- Product groupings
-suppliers        -- Vendor master data
-products         -- SKU, barcode, price, stock qty, reorder level
-stock_movements  -- Immutable audit log (never deleted)
-```
-
----
-
-## 🏗️ Tech Stack Summary
-
-| Layer | Technology | Purpose |
-|---|---|---|
-| **API** | Rust + Axum + SQLx | Type-safe, zero-cost backend |
-| **DB** | PostgreSQL + migrations | ACID-compliant inventory data |
-| **Auth** | JWT + bcrypt | Stateless token auth |
-| **Real-time** | Tokio broadcast + WS | Live stock change notifications |
-| **Desktop UI** | Tauri v2 + Svelte | 60fps native-feel Windows app |
-| **Design** | Glassmorphism CSS | Dark violet/cyan premium aesthetic |
-| **Mobile** | Kotlin + CameraX + ML Kit | On-device barcode scanning |
-| **API Client** | Retrofit + Moshi | Kotlin ↔ Rust API typesafe bridge |
-
----
-
-## 📄 License
-
-MIT © 2024 VibeStock MCA Final Year Project
+*Created for MCA Final Year Project Submission — 2024*
