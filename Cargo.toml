@@ -1,5 +1,6 @@
 [workspace]
-members = ["shared", "api"]
+members  = ["shared", "api"]
+exclude  = ["desktop/src-tauri"]
 resolver = "2"
 
 [workspace.package]

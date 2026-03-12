@@ -1,13 +1,21 @@
-use serde::{Deserialize, Serialize};
+// VibeStock Desktop — Tauri v2 backend entry point
+//
+// Exposes two Tauri commands to the Svelte frontend:
+//   - get_config  : returns API base URL and app version
+//   - open_url    : opens a URL in the system browser via tauri-plugin-opener
+//
+// #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-/// Configuration injected into the Svelte frontend via Tauri commands
+use serde::Serialize;
+
+/// Runtime configuration sent to the Svelte frontend.
 #[derive(Debug, Serialize)]
 pub struct AppConfig {
     pub api_base_url: String,
-    pub app_version: String,
+    pub app_version:  String,
 }
 
-/// Returns runtime config to the frontend
+/// Expose config to frontend — API URL can be overridden via VIBESTOCK_API_URL env var.
 #[tauri::command]
 fn get_config() -> AppConfig {
     AppConfig {
@@ -17,12 +25,6 @@ fn get_config() -> AppConfig {
     }
 }
 
-/// Opens an external URL in the system's default browser
-#[tauri::command]
-async fn open_external(url: String) -> Result<(), String> {
-    open::that(&url).map_err(|e| e.to_string())
-}
-
 // =============================================================================
 // Application entry point
 // =============================================================================
@@ -30,7 +32,7 @@ async fn open_external(url: String) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_config, open_external])
+        .invoke_handler(tauri::generate_handler![get_config])
         .run(tauri::generate_context!())
         .expect("Error while running VibeStock desktop application");
 }
