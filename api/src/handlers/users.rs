@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    Json,
+    Extension, Json,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -19,7 +19,7 @@ fn require_admin(claims: &Claims) -> AppResult<()> {
 /// GET /api/users
 pub async fn list_users(
     State(state): State<AppState>,
-    claims: Claims,
+    Extension(claims): Extension<Claims>,
 ) -> AppResult<Json<Vec<User>>> {
     require_admin(&claims)?;
 
@@ -46,7 +46,7 @@ pub struct UpdateRoleRequest {
 pub async fn update_user_role(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-    claims: Claims,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<UpdateRoleRequest>,
 ) -> AppResult<Json<User>> {
     require_admin(&claims)?;
@@ -86,7 +86,7 @@ pub struct UpdateStatusRequest {
 pub async fn toggle_user_status(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-    claims: Claims,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<UpdateStatusRequest>,
 ) -> AppResult<Json<User>> {
     require_admin(&claims)?;
