@@ -7,6 +7,7 @@
   import { createEventDispatcher } from 'svelte';
   import { authStore } from '../stores/auth.js';
   import { toast } from '../stores/toast.js';
+  import { themeStore } from '../stores/theme.js';
 
   export let activePage = 'dashboard';
   const dispatch = createEventDispatcher();
@@ -37,12 +38,17 @@
 
 <aside class="sidebar">
   <!-- Logo / Brand -->
-  <div class="brand">
-    <div class="brand-icon">⚡</div>
-    <div class="brand-text">
-      <div class="brand-name">VibeStock</div>
-      <div class="brand-sub">Inventory Pro</div>
+  <div class="brand-container">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-text">
+        <div class="brand-name">VibeStock</div>
+        <div class="brand-sub">Inventory Pro</div>
+      </div>
     </div>
+    <button class="theme-toggle" on:click={themeStore.toggle} title="Toggle Dark/Light Mode">
+      {$themeStore === 'dark' ? '☀️' : '🌙'}
+    </button>
   </div>
 
   <!-- Navigation -->
@@ -95,10 +101,15 @@
     z-index: 10;
   }
 
+  /* Brand Container */
+  .brand-container {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 var(--space-2);
+  }
+
   /* Brand */
   .brand {
     display: flex; align-items: center; gap: var(--space-3);
-    padding: 0 var(--space-2);
   }
   .brand-icon {
     width: 36px; height: 36px; border-radius: var(--radius-md);
@@ -109,6 +120,13 @@
   }
   .brand-name { font-weight: 800; font-size: 1rem; letter-spacing: -0.02em; }
   .brand-sub  { font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .theme-toggle {
+    background: none; border: none; cursor: pointer;
+    font-size: 1.2rem; padding: var(--space-1); border-radius: var(--radius-md);
+    color: var(--text-secondary); transition: all var(--transition-fast);
+  }
+  .theme-toggle:hover { color: var(--text-primary); transform: scale(1.1); background: var(--glass-hover); }
 
   /* Nav */
   .nav { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
@@ -160,7 +178,7 @@
   .sidebar-footer {
     display: flex; align-items: center; gap: var(--space-2);
     padding: var(--space-3);
-    background: rgba(255,255,255,0.03);
+    background: var(--glass-hover);
     border-radius: var(--radius-md);
     border: 1px solid var(--border-glass);
   }

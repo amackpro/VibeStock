@@ -37,6 +37,16 @@
   --shadow-md:  0 8px 32px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px var(--border-surface);
   --shadow-glow: 0 0 28px rgba(139, 92, 246, 0.3);
 
+  /* Glass/Overlay specific variables to allow swapping in light mode */
+  --glass-panel: rgba(10, 13, 24, 0.4);
+  --glass-card: rgba(10, 13, 24, 0.65);
+  --glass-hover: rgba(255, 255, 255, 0.05);
+  --glass-table-hd: rgba(124, 58, 237, 0.08);
+  --glass-table-hover: rgba(255, 255, 255, 0.03);
+  --modal-overlay: rgba(4, 6, 15, 0.85);
+  --input-bg: rgba(0, 0, 0, 0.2);
+  --input-focus-bg: rgba(0, 0, 0, 0.4);
+
   /* Typography */
   --font-sans:  'Inter', system-ui, -apple-system, sans-serif;
   --font-mono:  'JetBrains Mono', 'Fira Code', monospace;
@@ -58,6 +68,36 @@
   --transition-base: 300ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-slow: 500ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-spring: 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Light Theme Overrides */
+[data-theme="light"] {
+  --bg-base:        #F1F5F9;   /* Slate 100 */
+  --bg-surface:     #FFFFFF;   /* White */
+  --bg-elevated:    #FFFFFF;   /* White */
+
+  --text-primary:   #0F172A;   /* Slate 900 */
+  --text-secondary: #475569;   /* Slate 600 */
+  --text-muted:     #94A3B8;   /* Slate 400 */
+
+  --border-subtle:  rgba(99, 102, 241, 0.4);
+  --border-glass:   rgba(0, 0, 0, 0.08);
+  --border-surface: rgba(0, 0, 0, 0.05);
+
+  --glass-bg:       rgba(255, 255, 255, 0.65);
+  --glass-border:   rgba(0, 0, 0, 0.1);
+
+  --shadow-sm:  0 2px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md:  0 8px 32px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.05), 0 0 0 1px var(--border-surface);
+
+  --glass-panel: rgba(255, 255, 255, 0.6);
+  --glass-card: rgba(255, 255, 255, 0.85);
+  --glass-hover: rgba(0, 0, 0, 0.05);
+  --glass-table-hd: rgba(99, 102, 241, 0.08); /* Indigo tinted */
+  --glass-table-hover: rgba(0, 0, 0, 0.03);
+  --modal-overlay: rgba(255, 255, 255, 0.6);
+  --input-bg: rgba(255, 255, 255, 0.5);
+  --input-focus-bg: rgba(255, 255, 255, 0.8);
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
@@ -143,7 +183,7 @@ p  { color: var(--text-secondary); }
   border: 1px solid transparent;
 }
 .btn-ghost:hover {
-  background: rgba(255,255,255,0.05);
+  background: var(--glass-hover);
   color: var(--text-primary);
   border-color: var(--border-glass);
 }
@@ -161,7 +201,7 @@ p  { color: var(--text-secondary); }
 /* ── Inputs ── */
 .input, .select, .textarea {
   width: 100%;
-  background: rgba(0,0,0,0.2);
+  background: var(--input-bg);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -174,8 +214,8 @@ p  { color: var(--text-secondary); }
 }
 .input:focus, .select:focus, .textarea:focus {
   border-color: var(--accent-cyan);
-  background: rgba(0,0,0,0.4);
-  box-shadow: 0 0 0 3px rgba(34,211,238,0.15), inset 0 2px 4px rgba(0,0,0,0.3);
+  background: var(--input-focus-bg);
+  box-shadow: 0 0 0 3px rgba(34,211,238,0.15), inset 0 2px 4px rgba(0,0,0,0.1);
   transform: translateY(-1px);
 }
 .input::placeholder { color: var(--text-muted); font-weight: 400; }
@@ -195,7 +235,7 @@ p  { color: var(--text-secondary); }
   border: 1px solid var(--border-glass);
 }
 table { width: 100%; border-collapse: collapse; }
-thead { background: rgba(124,58,237,0.08); }
+thead { background: var(--glass-table-hd); }
 th {
   text-align: left; padding: var(--space-3) var(--space-4);
   font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em;
@@ -208,7 +248,7 @@ td {
   border-top: 1px solid var(--border-glass);
 }
 tbody tr { transition: background var(--transition-fast); }
-tbody tr:hover { background: rgba(255,255,255,0.03); }
+tbody tr:hover { background: var(--glass-table-hover); }
 
 /* ── Badges ──────────────────────────────────────────────────────────────── */
 .badge {
@@ -317,7 +357,7 @@ tbody tr:hover { background: rgba(255,255,255,0.03); }
 /* ── Modal ───────────────────────────────────────────────────────────────── */
 .modal-backdrop {
   position: fixed; inset: 0;
-  background: rgba(4,6,15,0.85);
+  background: var(--modal-overlay);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
@@ -339,30 +379,30 @@ tbody tr:hover { background: rgba(255,255,255,0.03); }
   padding: var(--space-6) var(--space-8);
   border-bottom: 1px solid var(--border-surface);
   display: flex; align-items: center; justify-content: space-between;
-  background: rgba(255,255,255,0.02);
+  background: var(--glass-hover);
 }
 .modal-body    { padding: var(--space-6) var(--space-8); overflow-y: auto; flex: 1; }
 .modal-footer  {
   padding: var(--space-5) var(--space-8);
   border-top: 1px solid var(--border-surface);
   display: flex; justify-content: flex-end; gap: var(--space-3);
-  background: rgba(0,0,0,0.2);
+  background: var(--glass-hover);
 }
 
 /* ── Search bar ──────────────────────────────────────────────────────────── */
 .search-bar {
   display: flex; align-items: center; gap: var(--space-3);
-  background: rgba(0,0,0,0.3);
+  background: var(--input-bg);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-full);
   padding: var(--space-2) var(--space-4);
   transition: all var(--transition-base);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 .search-bar:focus-within { 
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(34,211,238,0.15), inset 0 2px 4px rgba(0,0,0,0.3);
-  background: rgba(0,0,0,0.5);
+  box-shadow: 0 0 0 3px rgba(34,211,238,0.15), inset 0 2px 4px rgba(0,0,0,0.2);
+  background: var(--input-focus-bg);
 }
 .search-bar input {
   background: none; border: none; outline: none;
@@ -382,7 +422,7 @@ tbody tr:hover { background: rgba(255,255,255,0.03); }
   color: var(--text-secondary); cursor: pointer; font-size: 0.9375rem; font-weight: 500;
   transition: all var(--transition-base);
 }
-.page-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); transform: translateY(-2px); }
+.page-btn:hover { background: var(--glass-hover); color: var(--text-primary); transform: translateY(-2px); }
 .page-btn.active {
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-glow));
   border-color: transparent; color: #fff;

@@ -12,6 +12,7 @@
   import { authStore }   from './stores/auth.js';
   import { toasts, toast } from './stores/toast.js';
   import { openWebSocket } from './lib/api.js';
+  import { themeStore }    from './stores/theme.js';
 
   import Sidebar   from './components/Sidebar.svelte';
   import Login     from './routes/Login.svelte';
@@ -28,9 +29,10 @@
   // ── Auth reactive state ──────────────────────────────────────────────────────
   $: isAuthed = !!$authStore.token;
 
-  // Track initial load (useful if we want to add future mount logic)
-  let hasMounted = false;
-  onMount(() => { hasMounted = true; });
+  // Initialize theme tracking (creates data-theme html tag attribute)
+  onMount(() => {
+    themeStore.init();
+  });
 
   // ── WebSocket ────────────────────────────────────────────────────────────────
   let ws;
@@ -142,7 +144,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background: rgba(10, 13, 24, 0.3); /* highly transparent slate */
+    background: var(--glass-panel); /* swapped from hardcoded rgba to css var */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-left: 1px solid var(--border-glass);
