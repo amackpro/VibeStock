@@ -1,0 +1,38 @@
+# Rust
+/target
+Cargo.lock
+
+# Environment
+.env
+.env.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Node (desktop frontend)
+desktop/node_modules/
+desktop/.svelte-kit/
+desktop/build/
+desktop/dist/
+
+# Tauri
+desktop/src-tauri/target/
+desktop/src-tauri/WixTools/
+
+# Android
+android/.gradle/
+android/app/build/
+android/local.properties
+android/*.apk
+android/*.keystore
+
+# Database
+*.sql.bak
+dump.sql
+
+# OS
+.DS_Store
+Thumbs.db
