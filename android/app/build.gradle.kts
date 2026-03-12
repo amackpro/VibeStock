@@ -27,8 +27,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // API base URL — change to your machine's IP on your LAN
-        buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.100:3000\"")
+        // API base URL — 10.0.2.2 accesses localhost on the Android Emulator
+        // Change to your machine's LAN IP (e.g., 192.168.1.x) if using a physical device
+        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000\"")
     }
 
     buildTypes {

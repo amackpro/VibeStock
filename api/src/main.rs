@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     middleware,
-    routing::{delete, get, post, put},
+    routing::{get, post},
     Router,
 };
 use tokio::sync::broadcast;
