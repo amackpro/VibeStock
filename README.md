@@ -93,8 +93,7 @@ cd desktop
 npm install
 
 # Start the Tauri application
-cargo tauri dev
-# or alternatively: npx @tauri-apps/cli dev
+npx @tauri-apps/cli dev
 ```
 
 ### Step 4: Running the Android Scanner
