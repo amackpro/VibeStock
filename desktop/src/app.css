@@ -7,24 +7,24 @@
 
 /* ── CSS Custom Properties (Design Tokens) ────────────────────────────────── */
 :root {
-  /* Colors - Ultra Premium Slate / Navy */
-  --bg-base:        #04060F;   /* deeply rich midnight */
-  --bg-surface:     #0A0D18;   /* slightly lifted slate for cards */
-  --bg-elevated:    #12182B;   /* higher elevation for modals */
+  /* Colors - Softer, Calmer Matte Dark Theme */
+  --bg-base:        #0B0F19;   /* Slate/navy */
+  --bg-surface:     #121827;   /* Slightly lighter slate */
+  --bg-elevated:    #1F2937;   /* Elevated panels */
 
-  --accent-primary:  #8B5CF6;  /* vibrant violet */
-  --accent-glow:     #C084FC;  /* soft fuchsia glow */
-  --accent-cyan:     #22D3EE;  /* bright electric cyan */
-  --accent-green:    #10B981;  /* emerald */
-  --accent-amber:    #F59E0B;  /* amber */
-  --accent-red:      #F43F5E;  /* rose/red */
+  --accent-primary:  #6366F1;  /* Soft Indigo (instead of bright violet) */
+  --accent-glow:     #818CF8;  /* Lighter indigo glow */
+  --accent-cyan:     #2DD4BF;  /* Soft Teal (instead of neon cyan) */
+  --accent-green:    #10B981;  /* Emerald */
+  --accent-amber:    #F59E0B;  /* Amber */
+  --accent-red:      #EF4444;  /* Red */
 
-  --text-primary:   #F8FAFC;   /* crisp white */
-  --text-secondary: #94A3B8;   /* cool gray */
-  --text-muted:     #475569;   /* dark gray */
+  --text-primary:   #E2E8F0;   /* Muted white/gray */
+  --text-secondary: #94A3B8;   /* Cool gray */
+  --text-muted:     #64748B;   /* Slate gray */
 
-  --border-subtle:  rgba(139, 92, 246, 0.25);
-  --border-glass:   rgba(255, 255, 255, 0.08);
+  --border-subtle:  rgba(99, 102, 241, 0.2);
+  --border-glass:   rgba(255, 255, 255, 0.06);
   --border-surface: rgba(255, 255, 255, 0.03);
 
   /* Glass morphism enhancements */
@@ -428,9 +428,9 @@ tbody tr:hover { background: rgba(255,255,255,0.03); }
 }
 
 /* Ambient Pulse glow for active elements */
-.animate-pulse-glow { animation: pulseGlow 3s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulseGlow 4s ease-in-out infinite; }
 @keyframes pulseGlow {
-  0% { box-shadow: 0 0 10px rgba(139,92,246,0.3); }
-  50% { box-shadow: 0 0 25px rgba(34,211,238,0.5); }
-  100% { box-shadow: 0 0 10px rgba(139,92,246,0.3); }
+  0% { box-shadow: 0 0 10px rgba(99,102,241,0.2); }
+  50% { box-shadow: 0 0 20px rgba(45,212,191,0.3); }
+  100% { box-shadow: 0 0 10px rgba(99,102,241,0.2); }
 }

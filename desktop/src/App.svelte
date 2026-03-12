@@ -28,8 +28,14 @@
   // ── Auth reactive state ──────────────────────────────────────────────────────
   $: isAuthed = !!$authStore.token;
 
-  // Reset page to dashboard whenever a user logs in
-  $: if (isAuthed) {
+  // Track initial load to prevent visual flashing on default route assignments
+  let hasMounted = false;
+  onMount(() => { hasMounted = true; });
+
+  // Reset page to dashboard whenever a user logs in (only AFTER mount to prevent double-render flash)
+  $: if (isAuthed && hasMounted && page === 'dashboard' /* Prevent forcing if already there */) {
+     // do nothing if already dashboard to prevent flash
+  } else if (isAuthed && hasMounted) {
     page = 'dashboard';
   }
 
@@ -96,27 +102,27 @@
 </div>
 
 <style>
-  /* Ambient Animated Orbs Layer */
+  /* Ambient Animated Orbs Layer - Toned Down */
   .ambient-bg {
     position: fixed; inset: 0; z-index: -1;
     overflow: hidden; background: var(--bg-base);
   }
   .orb {
     position: absolute; border-radius: 50%;
-    filter: blur(140px); opacity: 0.45;
-    animation: moveOrbs 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+    filter: blur(160px); opacity: 0.15; /* Much softer */
+    animation: moveOrbs 30s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
   }
   .orb-1 {
-    width: 60vw; height: 60vw; background: rgba(139, 92, 246, 0.2); /* Violet */
-    top: -10%; left: -10%; animation-duration: 25s;
+    width: 60vw; height: 60vw; background: var(--accent-primary);
+    top: -10%; left: -10%; animation-duration: 35s;
   }
   .orb-2 {
-    width: 50vw; height: 50vw; background: rgba(34, 211, 238, 0.15); /* Cyan */
-    bottom: -20%; right: -10%; animation-duration: 30s; animation-direction: alternate-reverse;
+    width: 50vw; height: 50vw; background: var(--accent-cyan);
+    bottom: -20%; right: -10%; animation-duration: 40s; animation-direction: alternate-reverse;
   }
   .orb-3 {
-    width: 40vw; height: 40vw; background: rgba(244, 63, 94, 0.1); /* Rose (soft warm touch) */
-    top: 30%; left: 40%; animation-duration: 35s; animation-delay: -5s;
+    width: 40vw; height: 40vw; background: rgba(255, 255, 255, 0.05);
+    top: 30%; left: 40%; animation-duration: 45s; animation-delay: -5s;
   }
 
   @keyframes moveOrbs {
