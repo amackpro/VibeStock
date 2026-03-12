@@ -28,6 +28,11 @@
   // ── Auth reactive state ──────────────────────────────────────────────────────
   $: isAuthed = !!$authStore.token;
 
+  // Reset page to dashboard whenever a user logs in
+  $: if (isAuthed) {
+    page = 'dashboard';
+  }
+
   // ── WebSocket ────────────────────────────────────────────────────────────────
   let ws;
 
