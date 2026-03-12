@@ -90,7 +90,7 @@
     width: 260px;
     min-width: 260px;
     height: 100%;
-    background: rgba(10, 13, 24, 0.4);
+    background: var(--glass-card);
     border-right: 1px solid var(--border-glass);
     display: flex;
     flex-direction: column;

@@ -72,7 +72,7 @@
 
 /* Light Theme Overrides */
 [data-theme="light"] {
-  --bg-base:        #F1F5F9;   /* Slate 100 */
+  --bg-base:        #F8FAFC;   /* Slate 50 - Lighter background */
   --bg-surface:     #FFFFFF;   /* White */
   --bg-elevated:    #FFFFFF;   /* White */
 
@@ -81,23 +81,23 @@
   --text-muted:     #94A3B8;   /* Slate 400 */
 
   --border-subtle:  rgba(99, 102, 241, 0.4);
-  --border-glass:   rgba(0, 0, 0, 0.08);
-  --border-surface: rgba(0, 0, 0, 0.05);
+  --border-glass:   rgba(15, 23, 42, 0.08); /* Darker border for light mode */
+  --border-surface: rgba(15, 23, 42, 0.05);
 
-  --glass-bg:       rgba(255, 255, 255, 0.65);
-  --glass-border:   rgba(0, 0, 0, 0.1);
+  --glass-bg:       rgba(255, 255, 255, 0.7);
+  --glass-border:   rgba(15, 23, 42, 0.1);
 
-  --shadow-sm:  0 2px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md:  0 8px 32px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.05), 0 0 0 1px var(--border-surface);
+  --shadow-sm:  0 2px 4px rgba(15,23,42,0.04), 0 1px 2px rgba(15,23,42,0.02);
+  --shadow-md:  0 8px 32px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04), 0 0 0 1px var(--border-surface);
 
-  --glass-panel: rgba(255, 255, 255, 0.6);
-  --glass-card: rgba(255, 255, 255, 0.85);
-  --glass-hover: rgba(0, 0, 0, 0.05);
-  --glass-table-hd: rgba(99, 102, 241, 0.08); /* Indigo tinted */
-  --glass-table-hover: rgba(0, 0, 0, 0.03);
-  --modal-overlay: rgba(255, 255, 255, 0.6);
-  --input-bg: rgba(255, 255, 255, 0.5);
-  --input-focus-bg: rgba(255, 255, 255, 0.8);
+  --glass-panel: rgba(255, 255, 255, 0.9); /* Opaque white for main panel */
+  --glass-card: rgba(255, 255, 255, 0.95);
+  --glass-hover: rgba(15, 23, 42, 0.04);
+  --glass-table-hd: rgba(99, 102, 241, 0.06); /* Indigo tinted */
+  --glass-table-hover: rgba(15, 23, 42, 0.02);
+  --modal-overlay: rgba(255, 255, 255, 0.7);
+  --input-bg: #FFFFFF;
+  --input-focus-bg: #FFFFFF;
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
@@ -277,10 +277,8 @@ tbody tr:hover { background: var(--glass-table-hover); }
   background: linear-gradient(90deg, var(--accent-primary), var(--accent-cyan));
 }
 .stat-value {
-  font-size: 2rem; font-weight: 800; letter-spacing: -0.04em;
-  background: linear-gradient(135deg, var(--text-primary), var(--accent-glow));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 2.2rem; font-weight: 800; letter-spacing: -0.04em;
+  color: var(--text-primary);
 }
 .stat-label   { font-size: 0.8125rem; color: var(--text-secondary); font-weight: 500; }
 .stat-icon    { font-size: 2rem; position: absolute; right: var(--space-5); top: var(--space-5); opacity: 0.2; }
