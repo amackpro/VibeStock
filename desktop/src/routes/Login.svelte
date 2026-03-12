@@ -193,8 +193,10 @@
     padding: var(--space-8) var(--space-10);
     position: relative; z-index: 1;
     display: flex; flex-direction: column; gap: var(--space-6);
-    background: rgba(10, 13, 24, 0.65); /* dark glass */
-    box-shadow: 0 24px 64px rgba(0,0,0,0.8), 0 0 0 1px inset rgba(255,255,255,0.05);
+    background: var(--glass-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
   }
 
   .login-logo { text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
@@ -206,7 +208,7 @@
     box-shadow: 0 12px 32px rgba(139,92,246,0.4), inset 0 2px 0 rgba(255,255,255,0.3);
     animation: float 6s ease-in-out infinite;
   }
-  .logo-title { font-size: 2rem; font-weight: 800; margin-top: var(--space-2); letter-spacing: -0.04em; }
+  .logo-title { font-size: 2rem; font-weight: 800; margin-top: var(--space-2); letter-spacing: -0.04em; color: var(--text-primary); }
   .logo-sub   { color: var(--text-secondary); font-size: 0.9375rem; letter-spacing: 0.05em; text-transform: uppercase; }
 
   .login-form  { display: flex; flex-direction: column; gap: var(--space-5); }
@@ -227,9 +229,11 @@
   }
   code {
     font-family: var(--font-mono);
-    background: var(--glass-bg);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-surface);
     padding: 1px 4px; border-radius: 4px;
     color: var(--accent-cyan);
+    font-weight: 600;
   }
 
   .toggle-mode {
