@@ -59,18 +59,19 @@
   }
 </script>
 
-<div class="page page-header">
-  <div>
-    <h1 class="page-title">User Management</h1>
-    <p class="page-subtitle">Admin control panel for staff access and roles</p>
+<div class="page">
+  <div class="page-header">
+    <div class="page-title-group">
+      <h1 class="page-title">User Management</h1>
+      <p class="page-subtitle">Admin control panel for staff access and roles</p>
+    </div>
+    <button class="btn btn-primary" on:click={loadUsers} disabled={loading}>
+      {loading ? '↻ Refreshing...' : '↻ Refresh Data'}
+    </button>
   </div>
-  <button class="btn btn-primary" on:click={loadUsers} disabled={loading}>
-    {loading ? '↻ Refreshing...' : '↻ Refresh Data'}
-  </button>
-</div>
 
-<div class="card table-container stagger-row" style="padding:0;overflow:hidden;margin:0 var(--space-8);animation-delay: 50ms">
-  {#if loading && users.length === 0}
+  <div class="card table-container stagger-row" style="padding:0;overflow:hidden;animation-delay: 50ms">
+    {#if loading && users.length === 0}
     <div class="loading-state">
       <div class="spinner"></div>
       <p>Loading user database...</p>
@@ -158,6 +159,7 @@
       </tbody>
     </table>
   {/if}
+  </div>
 </div>
 
 <style>
