@@ -22,6 +22,13 @@
 
   async function updateRole(user, newRole) {
     if (user.role === newRole) return;
+    
+    if (!confirm(`Are you sure you want to change ${user.username}'s role to ${newRole}?`)) {
+      // Revert the select element value
+      users = [...users]; 
+      return;
+    }
+
     processingId = user.id;
     try {
       await api.users.updateRole(user.id, newRole);
@@ -29,6 +36,7 @@
       await loadUsers();
     } catch (e) {
       toast.error(e.message || "Failed to update role");
+      users = [...users]; // Trigger reactivity to revert UI on error
     } finally {
       processingId = null;
     }
