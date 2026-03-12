@@ -1,4 +1,4 @@
-package com.vibestock.scanner
+package com.vibe.stock
 
 import android.content.Intent
 import android.content.SharedPreferences
@@ -6,7 +6,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.vibestock.scanner.databinding.ActivityMainBinding
+import com.vibe.stock.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 
 /**

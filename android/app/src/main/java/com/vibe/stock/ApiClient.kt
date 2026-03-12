@@ -1,4 +1,4 @@
-package com.vibestock.scanner
+package com.vibe.stock
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory

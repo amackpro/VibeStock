@@ -10,16 +10,16 @@
  *  - Material 3   : modern UI components
  */
 plugins {
-    id("com.android.application") version "8.3.0"
-    id("org.jetbrains.kotlin.android") version "1.9.22"
+    id("com.android.application") version "8.2.0"
+    id("org.jetbrains.kotlin.android") version "1.9.20"
 }
 
 android {
-    namespace   = "com.vibestock.scanner"
+    namespace   = "com.vibe.stock"
     compileSdk  = 34
 
     defaultConfig {
-        applicationId = "com.vibestock.scanner"
+        applicationId = "com.vibe.stock"
         minSdk        = 26
         targetSdk     = 34
         versionCode   = 1

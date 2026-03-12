@@ -1,4 +1,4 @@
-package com.vibestock.scanner
+package com.vibe.stock
 
 import android.Manifest
 import android.content.SharedPreferences
@@ -15,7 +15,7 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
-import com.vibestock.scanner.databinding.ActivityScannerBinding
+import com.vibe.stock.databinding.ActivityScannerBinding
 import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
