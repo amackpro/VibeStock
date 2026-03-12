@@ -6,8 +6,9 @@ export default defineConfig({
   plugins: [svelte()],
   // Tauri uses a specific port in dev mode
   server: {
-    port: 5173,
+    port: 1420,
     strictPort: true,
+    host: '127.0.0.1',
   },
   // Prevent asset path issues in Tauri
   base: './',
