@@ -59,17 +59,17 @@
   }
 </script>
 
-<div class="page-header">
+<div class="page page-header">
   <div>
     <h1 class="page-title">User Management</h1>
-    <p class="page-sub">Admin control panel for staff access and roles</p>
+    <p class="page-subtitle">Admin control panel for staff access and roles</p>
   </div>
   <button class="btn btn-primary" on:click={loadUsers} disabled={loading}>
     {loading ? '↻ Refreshing...' : '↻ Refresh Data'}
   </button>
 </div>
 
-<div class="card table-container">
+<div class="card table-container stagger-row" style="padding:0;overflow:hidden;margin:0 var(--space-8);animation-delay: 50ms">
   {#if loading && users.length === 0}
     <div class="loading-state">
       <div class="spinner"></div>
@@ -87,35 +87,35 @@
         </tr>
       </thead>
       <tbody>
-        {#each users as u (u.id)}
-          <tr class:suspended={!u.is_active}>
+        {#each users as u, i (u.id)}
+          <tr class="stagger-row" class:suspended={!u.is_active} style="animation-delay: {100 + (i * 50)}ms">
             <td>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-3">
                 <div class="user-avatar-sm">{u.full_name.charAt(0).toUpperCase()}</div>
                 <div>
-                  <div class="font-medium">{u.full_name}</div>
-                  <div class="text-xs text-muted">@{u.username}</div>
+                  <div style="font-weight:600">{u.full_name}</div>
+                  <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)">@{u.username}</div>
                 </div>
               </div>
             </td>
-            <td>{u.email}</td>
+            <td style="color:var(--text-secondary)">{u.email}</td>
             <td>
               {#if u.role === 'admin'}
-                <span class="badge badge-error">Admin</span>
+                <span class="badge badge-red">Admin</span>
               {:else if u.role === 'manager'}
-                <span class="badge badge-warning">Manager</span>
+                <span class="badge badge-amber">Manager</span>
               {:else}
-                <span class="badge badge-success">Staff</span>
+                <span class="badge badge-green">Staff</span>
               {/if}
             </td>
             <td>
               {#if u.is_active}
-                <span class="badge badge-success">Active</span>
+                <span class="badge badge-green">Active</span>
               {:else}
-                <span class="badge badge-error">Suspended</span>
+                <span class="badge badge-red">Suspended</span>
               {/if}
             </td>
-            <td class="text-right">
+            <td style="text-align:right">
               <div class="action-buttons">
                 <!-- Role Dropdown -->
                 <select 
@@ -132,7 +132,7 @@
                 <!-- Status Toggle -->
                 {#if u.is_active}
                   <button 
-                    class="btn btn-error btn-sm" 
+                    class="btn btn-danger btn-sm" 
                     on:click={() => toggleStatus(u)}
                     disabled={processingId === u.id}
                     title="Suspend User"
@@ -141,7 +141,7 @@
                   </button>
                 {:else}
                   <button 
-                    class="btn btn-success btn-sm" 
+                    class="btn btn-primary btn-sm" 
                     on:click={() => toggleStatus(u)}
                     disabled={processingId === u.id}
                     title="Reactivate User"

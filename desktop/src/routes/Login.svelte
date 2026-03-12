@@ -57,9 +57,9 @@
   <div class="blob blob-1"></div>
   <div class="blob blob-2"></div>
 
-  <div class="login-card card">
+  <div class="login-card card stagger-row">
     <!-- Logo -->
-    <div class="login-logo">
+    <div class="login-logo stagger-row">
       <div class="logo-icon">⚡</div>
       <h1 class="logo-title">VibeStock</h1>
       <p class="logo-sub">Inventory Management System</p>
@@ -67,7 +67,7 @@
 
     <!-- Form -->
     <form class="login-form" on:submit|preventDefault={handleSubmit}>
-      <div class="form-group">
+      <div class="form-group stagger-row">
         <label class="label" for="username">Username</label>
         <input
           id="username"
@@ -82,7 +82,7 @@
       </div>
 
       {#if isRegisterMode}
-        <div class="form-group slide-down">
+        <div class="form-group slide-down stagger-row">
           <label class="label" for="full_name">Full Name</label>
           <input
             id="full_name"
@@ -96,7 +96,7 @@
           />
         </div>
 
-        <div class="form-group slide-down">
+        <div class="form-group slide-down stagger-row">
           <label class="label" for="email">Email</label>
           <input
             id="email"
@@ -111,7 +111,7 @@
         </div>
       {/if}
 
-      <div class="form-group">
+      <div class="form-group stagger-row">
         <label class="label" for="password">Password</label>
         <input
           id="password"
@@ -163,45 +163,45 @@
     width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
     background: var(--bg-base);
-    background-image:
-      radial-gradient(ellipse at 30% 40%, rgba(124,58,237,0.12) 0%, transparent 55%),
-      radial-gradient(ellipse at 75% 65%, rgba(6,182,212,0.08) 0%, transparent 50%);
     position: relative; overflow: hidden;
   }
 
-  /* Animated background blobs */
+  /* Animated ethereal background blobs */
   .blob {
     position: absolute; border-radius: 50%;
-    filter: blur(80px); opacity: 0.35;
-    animation: float 8s ease-in-out infinite;
+    filter: blur(100px); opacity: 0.35;
+    animation: moveBlob 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .blob-1 { width: 400px; height: 400px; background: var(--accent-primary); top: -100px; left: -100px; animation-delay: 0s; }
-  .blob-2 { width: 300px; height: 300px; background: var(--accent-cyan);    bottom: -80px; right: -80px; animation-delay: 3s; }
-  @keyframes float {
-    0%,100% { transform: translateY(0) scale(1); }
-    50%      { transform: translateY(-30px) scale(1.05); }
+  .blob-1 { width: 50vw; height: 50vw; background: rgba(139, 92, 246, 0.2); top: -20%; left: -10%; }
+  .blob-2 { width: 40vw; height: 40vw; background: rgba(34, 211, 238, 0.15); bottom: -10%; right: -10%; animation-direction: alternate-reverse; animation-duration: 25s; }
+  @keyframes moveBlob {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(10vw, 15vh) scale(1.1); }
   }
 
   .login-card {
-    width: 400px; max-width: 95vw;
-    padding: var(--space-8);
+    width: 420px; max-width: 95vw;
+    padding: var(--space-8) var(--space-10);
     position: relative; z-index: 1;
     display: flex; flex-direction: column; gap: var(--space-6);
+    background: rgba(10, 13, 24, 0.65); /* dark glass */
+    box-shadow: 0 24px 64px rgba(0,0,0,0.8), 0 0 0 1px inset rgba(255,255,255,0.05);
   }
 
-  .login-logo { text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+  .login-logo { text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
   .logo-icon {
-    width: 60px; height: 60px; border-radius: var(--radius-lg);
+    width: 64px; height: 64px; border-radius: var(--radius-xl);
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.8rem;
-    box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+    font-size: 2rem; color: white;
+    box-shadow: 0 12px 32px rgba(139,92,246,0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+    animation: float 6s ease-in-out infinite;
   }
-  .logo-title { font-size: 1.75rem; font-weight: 800; margin-top: var(--space-2); }
-  .logo-sub   { color: var(--text-secondary); font-size: 0.875rem; }
+  .logo-title { font-size: 2rem; font-weight: 800; margin-top: var(--space-2); letter-spacing: -0.04em; }
+  .logo-sub   { color: var(--text-secondary); font-size: 0.9375rem; letter-spacing: 0.05em; text-transform: uppercase; }
 
-  .login-form  { display: flex; flex-direction: column; gap: var(--space-4); }
-  .login-btn   { width: 100%; justify-content: center; padding: var(--space-3); font-size: 1rem; }
+  .login-form  { display: flex; flex-direction: column; gap: var(--space-5); }
+  .login-btn   { width: 100%; justify-content: center; padding: 12px; font-size: 1.05rem; margin-top: var(--space-2); }
   .login-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
 
   .error-msg {

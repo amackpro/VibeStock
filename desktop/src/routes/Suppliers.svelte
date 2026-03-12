@@ -61,7 +61,7 @@
   {#if loading}
     <div style="display:flex;justify-content:center;padding:4rem"><div class="spinner" style="width:32px;height:32px;border-width:3px"></div></div>
   {:else}
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card stagger-row" style="padding:0;overflow:hidden;animation-delay: 50ms">
       <div class="table-wrapper" style="border-radius:0;border:none">
         <table>
           <thead>
@@ -75,8 +75,8 @@
             </tr>
           </thead>
           <tbody>
-            {#each suppliers as s (s.id)}
-              <tr>
+            {#each suppliers as s, i (s.id)}
+              <tr class="stagger-row" style="animation-delay: {100 + (i * 50)}ms">
                 <td><div style="font-weight:600">{s.name}</div></td>
                 <td style="color:var(--text-secondary)">{s.contact_name ?? '—'}</td>
                 <td>

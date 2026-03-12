@@ -67,37 +67,37 @@
     <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
     <div class="grid grid-3 grid-gap-4">
 
-      <div class="card stat-card" style="--accent: var(--accent-primary)">
+      <div class="card stat-card stagger-row" style="--accent: var(--accent-primary); animation-delay: 50ms">
         <span class="stat-icon">📦</span>
         <div class="stat-value">{stats.total_products}</div>
         <div class="stat-label">Total Products</div>
       </div>
 
-      <div class="card stat-card">
+      <div class="card stat-card stagger-row" style="animation-delay: 100ms">
         <span class="stat-icon">🏷️</span>
         <div class="stat-value">{stats.total_categories}</div>
         <div class="stat-label">Categories</div>
       </div>
 
-      <div class="card stat-card">
+      <div class="card stat-card stagger-row" style="animation-delay: 150ms">
         <span class="stat-icon">🏭</span>
         <div class="stat-value">{stats.total_suppliers}</div>
         <div class="stat-label">Suppliers</div>
       </div>
 
-      <div class="card stat-card">
+      <div class="card stat-card stagger-row" style="animation-delay: 200ms">
         <span class="stat-icon">⚠️</span>
         <div class="stat-value" style="color: var(--accent-amber)">{stats.low_stock_count}</div>
         <div class="stat-label">Low Stock Items</div>
       </div>
 
-      <div class="card stat-card">
+      <div class="card stat-card stagger-row" style="animation-delay: 250ms">
         <span class="stat-icon">🚫</span>
         <div class="stat-value" style="color: var(--accent-red)">{stats.out_of_stock_count}</div>
         <div class="stat-label">Out of Stock</div>
       </div>
 
-      <div class="card stat-card">
+      <div class="card stat-card stagger-row" style="animation-delay: 300ms">
         <span class="stat-icon">💰</span>
         <div class="stat-value" style="font-size:1.35rem">{currency(stats.total_stock_value)}</div>
         <div class="stat-label">Total Stock Value</div>
@@ -106,7 +106,7 @@
     </div>
 
     <!-- ── Movements today banner ─────────────────────────────────────────── -->
-    <div class="today-banner card">
+    <div class="today-banner card stagger-row" style="animation-delay: 400ms">
       <span class="today-icon">🔄</span>
       <div>
         <div class="today-count">{stats.total_movements_today}</div>
@@ -115,7 +115,7 @@
     </div>
 
     <!-- ── Recent movements table ─────────────────────────────────────────── -->
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card stagger-row" style="padding:0;overflow:hidden; animation-delay: 500ms">
       <div class="section-header">
         <h3>Recent Stock Movements</h3>
       </div>
@@ -132,14 +132,14 @@
             </tr>
           </thead>
           <tbody>
-            {#each recentMovements as m}
-              <tr>
+            {#each recentMovements as m, i}
+              <tr class="stagger-row" style="animation-delay: {550 + (i * 50)}ms">
                 <td>
-                  <div style="font-weight:500">{m.product_name}</div>
+                  <div style="font-weight:600">{m.product_name}</div>
                   <div style="font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono)">{m.product_sku}</div>
                 </td>
                 <td><span class="badge {movBadge[m.movement_type] ?? 'badge-violet'}">{m.movement_type}</span></td>
-                <td style="font-family:var(--font-mono);font-weight:600">{m.quantity}</td>
+                <td style="font-family:var(--font-mono);font-weight:700">{m.quantity}</td>
                 <td style="color:var(--text-secondary);font-size:0.8125rem">{m.reference ?? '—'}</td>
                 <td style="color:var(--text-secondary);font-size:0.8125rem">{m.performed_by_name}</td>
                 <td style="color:var(--text-muted);font-size:0.75rem">{fmtDate(m.created_at)}</td>

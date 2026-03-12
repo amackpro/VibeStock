@@ -138,9 +138,9 @@
       <h1 class="page-title">Products</h1>
       <p class="page-subtitle">{total} total products</p>
     </div>
-    <div class="flex gap-3">
+    <div class="flex gap-4">
       <!-- Search -->
-      <div class="search-bar" style="width:220px">
+      <div class="search-bar" style="width:240px">
         <span>🔍</span>
         <input
           id="product-search"
@@ -155,7 +155,7 @@
   </div>
 
   <!-- ── Table card ──────────────────────────────────────────────────────────── -->
-  <div class="card" style="padding:0;overflow:hidden;flex:1">
+  <div class="card stagger-row" style="padding:0;overflow:hidden;flex:1;animation-delay: 50ms">
     {#if loading}
       <div style="display:flex;justify-content:center;padding:4rem">
         <div class="spinner" style="width:32px;height:32px;border-width:3px"></div>
@@ -176,9 +176,9 @@
             </tr>
           </thead>
           <tbody>
-            {#each products as p (p.id)}
+            {#each products as p, i (p.id)}
               {@const badge = stockBadge(p)}
-              <tr>
+              <tr class="stagger-row" style="animation-delay: {100 + (i * 50)}ms">
                 <td>
                   <div style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{p.name}</div>
                 </td>
@@ -295,8 +295,9 @@
 <style>
   .sku {
     font-family: var(--font-mono); font-size: 0.8rem;
-    background: rgba(124,58,237,0.1);
-    padding: 2px 6px; border-radius: 4px;
+    background: rgba(139, 92, 246, 0.15); /* violet tinted */
+    padding: 3px 8px; border-radius: 6px;
     color: var(--accent-glow);
+    border: 1px solid rgba(139, 92, 246, 0.3);
   }
 </style>

@@ -56,6 +56,13 @@
 {#if !isAuthed}
   <Login />
 {:else}
+  <!-- ── Ambient Animated Background ── -->
+  <div class="ambient-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
   <!-- ── App Shell ──────────────────────────────────────────────────────────── -->
   <div class="app-shell">
     <Sidebar activePage={page} on:navigate={(e) => navigate(e.detail)} />
@@ -89,22 +96,54 @@
 </div>
 
 <style>
+  /* Ambient Animated Orbs Layer */
+  .ambient-bg {
+    position: fixed; inset: 0; z-index: -1;
+    overflow: hidden; background: var(--bg-base);
+  }
+  .orb {
+    position: absolute; border-radius: 50%;
+    filter: blur(140px); opacity: 0.45;
+    animation: moveOrbs 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .orb-1 {
+    width: 60vw; height: 60vw; background: rgba(139, 92, 246, 0.2); /* Violet */
+    top: -10%; left: -10%; animation-duration: 25s;
+  }
+  .orb-2 {
+    width: 50vw; height: 50vw; background: rgba(34, 211, 238, 0.15); /* Cyan */
+    bottom: -20%; right: -10%; animation-duration: 30s; animation-direction: alternate-reverse;
+  }
+  .orb-3 {
+    width: 40vw; height: 40vw; background: rgba(244, 63, 94, 0.1); /* Rose (soft warm touch) */
+    top: 30%; left: 40%; animation-duration: 35s; animation-delay: -5s;
+  }
+
+  @keyframes moveOrbs {
+    0%   { transform: translate(0, 0) scale(1); }
+    50%  { transform: translate(10vw, 5vh) scale(1.1); }
+    100% { transform: translate(-5vw, 15vh) scale(0.9); }
+  }
+
+  /* Shell */
   .app-shell {
     display: flex;
     width: 100%;
     height: 100%;
     overflow: hidden;
+    position: relative; z-index: 1; /* Above ambient bg */
+    background: transparent; /* Changed from solid to let orbs show */
   }
   .main-content {
     flex: 1;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background: var(--bg-base);
-    /* Subtle mesh gradient background */
-    background-image:
-      radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.06) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, rgba(6,182,212,0.05) 0%, transparent 50%);
+    background: rgba(10, 13, 24, 0.3); /* highly transparent slate */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-left: 1px solid var(--border-glass);
+    box-shadow: -10px 0 40px rgba(0,0,0,0.5);
   }
-  .toast-icon { font-size: 1rem; flex-shrink: 0; }
+  .toast-icon { font-size: 1.25rem; flex-shrink: 0; }
 </style>

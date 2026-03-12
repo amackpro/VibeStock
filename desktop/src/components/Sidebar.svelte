@@ -47,9 +47,10 @@
 
   <!-- Navigation -->
   <nav class="nav">
-    {#each navItems as item}
+    {#each navItems as item, i}
       <button
-        class="nav-item"
+        class="nav-item stagger-row"
+        style="animation-delay: {50 + (i * 50)}ms"
         class:active={activePage === item.id}
         on:click={() => nav(item.id)}
         id="nav-{item.id}"
@@ -80,16 +81,18 @@
 
 <style>
   .sidebar {
-    width: 240px;
-    min-width: 240px;
+    width: 260px;
+    min-width: 260px;
     height: 100%;
-    background: rgba(255,255,255,0.03);
+    background: rgba(10, 13, 24, 0.4);
     border-right: 1px solid var(--border-glass);
     display: flex;
     flex-direction: column;
-    padding: var(--space-5) var(--space-3);
-    gap: var(--space-6);
-    backdrop-filter: blur(20px);
+    padding: var(--space-6) var(--space-4);
+    gap: var(--space-8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    z-index: 10;
   }
 
   /* Brand */
@@ -108,34 +111,49 @@
   .brand-sub  { font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
 
   /* Nav */
-  .nav { display: flex; flex-direction: column; gap: var(--space-1); flex: 1; }
+  .nav { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
 
   .nav-item {
     display: flex; align-items: center; gap: var(--space-3);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-md);
-    border: none; background: transparent;
+    padding: 10px var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid transparent; background: transparent;
     color: var(--text-secondary);
-    cursor: pointer; font-size: 0.875rem; font-weight: 500;
-    transition: all var(--transition-fast);
+    cursor: pointer; font-size: 0.9375rem; font-weight: 600;
+    transition: all var(--transition-base);
     text-align: left; position: relative; width: 100%;
     font-family: var(--font-sans);
+    overflow: hidden;
+  }
+  .nav-item::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
+    opacity: 0; transition: opacity var(--transition-fast); z-index: 0;
   }
   .nav-item:hover {
-    background: rgba(255,255,255,0.05);
     color: var(--text-primary);
+    transform: translateX(4px);
   }
+  .nav-item:hover::before { opacity: 1; }
+  .nav-item:hover .nav-icon { transform: scale(1.1) rotate(-5deg); color: var(--text-primary); }
+  
   .nav-item.active {
-    background: rgba(124,58,237,0.15);
-    color: var(--accent-glow);
+    background: rgba(139,92,246,0.15);
+    color: var(--text-primary);
+    border-color: rgba(139,92,246,0.3);
   }
-  .nav-icon   { font-size: 1.1rem; width: 20px; text-align: center; }
-  .nav-label  { flex: 1; }
+  .nav-icon { 
+    font-size: 1.25rem; width: 24px; text-align: center; 
+    transition: transform var(--transition-spring), color var(--transition-fast);
+    z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  }
+  .nav-label  { flex: 1; z-index: 1; }
   .nav-indicator {
-    width: 4px; height: 20px; border-radius: var(--radius-full);
+    width: 6px; height: 18px; border-radius: var(--radius-full);
     background: linear-gradient(180deg, var(--accent-primary), var(--accent-cyan));
-    position: absolute; right: -3px;
-    box-shadow: 0 0 8px rgba(124,58,237,0.6);
+    position: absolute; right: 12px; z-index: 1;
+    box-shadow: 0 0 12px rgba(139,92,246,0.8);
+    animation: scaleIn 0.3s var(--transition-spring);
   }
 
   /* Footer */

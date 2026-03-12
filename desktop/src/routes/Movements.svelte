@@ -89,7 +89,7 @@
   </div>
 
   <!-- ── Table ─────────────────────────────────────────────────────────────── -->
-  <div class="card" style="padding:0;overflow:hidden;flex:1">
+  <div class="card stagger-row" style="padding:0;overflow:hidden;flex:1;animation-delay: 50ms">
     {#if loading}
       <div style="display:flex;justify-content:center;padding:4rem"><div class="spinner" style="width:32px;height:32px;border-width:3px"></div></div>
     {:else}
@@ -107,8 +107,8 @@
             </tr>
           </thead>
           <tbody>
-            {#each movements as m (m.id)}
-              <tr>
+            {#each movements as m, i (m.id)}
+              <tr class="stagger-row" style="animation-delay: {100 + (i * 50)}ms">
                 <td style="font-size:0.8125rem;color:var(--text-muted);white-space:nowrap">{fmtDate(m.created_at)}</td>
                 <td>
                   <div style="font-weight:600">{m.product_name}</div>
