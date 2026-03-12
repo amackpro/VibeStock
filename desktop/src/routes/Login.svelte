@@ -166,14 +166,23 @@
     position: relative; overflow: hidden;
   }
 
-  /* Animated ethereal background blobs - Toned Down */
+  /* Animated ethereal background blobs - Toned Down & GPU Optimized */
   .blob {
     position: absolute; border-radius: 50%;
-    filter: blur(120px); opacity: 0.15; /* Much softer opacity */
+    opacity: 0.15; pointer-events: none;
     animation: moveBlob 30s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .blob-1 { width: 50vw; height: 50vw; background: var(--accent-primary); top: -20%; left: -10%; }
-  .blob-2 { width: 40vw; height: 40vw; background: var(--accent-cyan); bottom: -10%; right: -10%; animation-direction: alternate-reverse; animation-duration: 35s; }
+  .blob-1 { 
+    width: 60vw; height: 60vw; 
+    background: radial-gradient(circle, var(--accent-primary) 0%, transparent 60%); 
+    top: -20%; left: -10%; 
+  }
+  .blob-2 { 
+    width: 50vw; height: 50vw; 
+    background: radial-gradient(circle, var(--accent-cyan) 0%, transparent 60%); 
+    bottom: -10%; right: -10%; 
+    animation-direction: alternate-reverse; animation-duration: 35s; 
+  }
   @keyframes moveBlob {
     0% { transform: translate(0, 0) scale(1); }
     100% { transform: translate(10vw, 15vh) scale(1.1); }

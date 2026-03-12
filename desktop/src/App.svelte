@@ -28,16 +28,9 @@
   // ── Auth reactive state ──────────────────────────────────────────────────────
   $: isAuthed = !!$authStore.token;
 
-  // Track initial load to prevent visual flashing on default route assignments
+  // Track initial load (useful if we want to add future mount logic)
   let hasMounted = false;
   onMount(() => { hasMounted = true; });
-
-  // Reset page to dashboard whenever a user logs in (only AFTER mount to prevent double-render flash)
-  $: if (isAuthed && hasMounted && page === 'dashboard' /* Prevent forcing if already there */) {
-     // do nothing if already dashboard to prevent flash
-  } else if (isAuthed && hasMounted) {
-    page = 'dashboard';
-  }
 
   // ── WebSocket ────────────────────────────────────────────────────────────────
   let ws;
@@ -102,26 +95,30 @@
 </div>
 
 <style>
-  /* Ambient Animated Orbs Layer - Toned Down */
+  /* Ambient Animated Orbs Layer - Toned Down & GPU Optimized */
   .ambient-bg {
     position: fixed; inset: 0; z-index: -1;
     overflow: hidden; background: var(--bg-base);
+    pointer-events: none; /* explicitly ignore inputs */
   }
   .orb {
     position: absolute; border-radius: 50%;
-    filter: blur(160px); opacity: 0.15; /* Much softer */
+    opacity: 0.15;
     animation: moveOrbs 30s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
   }
   .orb-1 {
-    width: 60vw; height: 60vw; background: var(--accent-primary);
+    width: 60vw; height: 60vw;
+    background: radial-gradient(circle, var(--accent-primary) 0%, transparent 60%);
     top: -10%; left: -10%; animation-duration: 35s;
   }
   .orb-2 {
-    width: 50vw; height: 50vw; background: var(--accent-cyan);
+    width: 50vw; height: 50vw;
+    background: radial-gradient(circle, var(--accent-cyan) 0%, transparent 60%);
     bottom: -20%; right: -10%; animation-duration: 40s; animation-direction: alternate-reverse;
   }
   .orb-3 {
-    width: 40vw; height: 40vw; background: rgba(255, 255, 255, 0.05);
+    width: 40vw; height: 40vw;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 60%);
     top: 30%; left: 40%; animation-duration: 45s; animation-delay: -5s;
   }
 
