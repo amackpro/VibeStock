@@ -6,6 +6,7 @@
    */
   import { createEventDispatcher } from 'svelte';
   import { authStore } from '../stores/auth.js';
+  import { toast } from '../stores/toast.js';
 
   export let activePage = 'dashboard';
   const dispatch = createEventDispatcher();
@@ -19,7 +20,13 @@
   ];
 
   function nav(id) { dispatch('navigate', id); }
-  function logout()  { authStore.logout(); }
+  
+  function logout() {
+    if (confirm("Are you sure you want to log out?")) {
+      authStore.logout();
+      toast.success("Logged out successfully");
+    }
+  }
 
   $: user = $authStore.user;
 </script>

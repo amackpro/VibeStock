@@ -5,26 +5,50 @@
    */
   import { api }       from '../lib/api.js';
   import { authStore } from '../stores/auth.js';
+  import { toast }     from '../stores/toast.js';
 
+  let isRegisterMode = false;
   let username = '';
   let password = '';
+  let email = '';
+  let full_name = '';
   let loading  = false;
   let error    = '';
 
-  async function handleLogin() {
-    if (!username || !password) { error = 'Please fill in all fields.'; return; }
-    loading = true; error = '';
-    try {
-      const resp = await api.auth.login({ username, password });
-      authStore.login(resp);
-    } catch (e) {
-      error = e.message ?? 'Login failed. Please try again.';
-    } finally {
-      loading = false;
+  async function handleSubmit() {
+    if (isRegisterMode) {
+      if (!username || !password || !email || !full_name) { error = 'Please fill in all fields.'; return; }
+      loading = true; error = '';
+      try {
+        await api.auth.register({ username, password, email, full_name });
+        toast.success("Account created successfully! Please log in.");
+        isRegisterMode = false;
+        password = ''; // clear password on switch
+      } catch (e) {
+        error = e.message ?? 'Registration failed.';
+      } finally {
+        loading = false;
+      }
+    } else {
+      if (!username || !password) { error = 'Please fill in all fields.'; return; }
+      loading = true; error = '';
+      try {
+        const resp = await api.auth.login({ username, password });
+        authStore.login(resp);
+      } catch (e) {
+        error = e.message ?? 'Login failed. Please try again.';
+      } finally {
+        loading = false;
+      }
     }
   }
 
-  function onKey(e) { if (e.key === 'Enter') handleLogin(); }
+  function toggleMode() {
+    isRegisterMode = !isRegisterMode;
+    error = '';
+  }
+
+  function onKey(e) { if (e.key === 'Enter') handleSubmit(); }
 </script>
 
 <!-- Full-screen login with animated gradient mesh background -->
@@ -42,7 +66,7 @@
     </div>
 
     <!-- Form -->
-    <form class="login-form" on:submit|preventDefault={handleLogin}>
+    <form class="login-form" on:submit|preventDefault={handleSubmit}>
       <div class="form-group">
         <label class="label" for="username">Username</label>
         <input
@@ -56,6 +80,36 @@
           disabled={loading}
         />
       </div>
+
+      {#if isRegisterMode}
+        <div class="form-group slide-down">
+          <label class="label" for="full_name">Full Name</label>
+          <input
+            id="full_name"
+            class="input"
+            type="text"
+            placeholder="John Doe"
+            bind:value={full_name}
+            on:keydown={onKey}
+            autocomplete="name"
+            disabled={loading}
+          />
+        </div>
+
+        <div class="form-group slide-down">
+          <label class="label" for="email">Email</label>
+          <input
+            id="email"
+            class="input"
+            type="email"
+            placeholder="john@example.com"
+            bind:value={email}
+            on:keydown={onKey}
+            autocomplete="email"
+            disabled={loading}
+          />
+        </div>
+      {/if}
 
       <div class="form-group">
         <label class="label" for="password">Password</label>
@@ -83,14 +137,24 @@
       >
         {#if loading}
           <div class="spinner" style="width:16px;height:16px;border-width:2px;"></div>
-          Signing in…
+          {isRegisterMode ? 'Creating...' : 'Signing in…'}
         {:else}
-          Sign In →
+          {isRegisterMode ? 'Create Account' : 'Sign In →'}
         {/if}
       </button>
+
+      <div class="toggle-mode">
+        {#if isRegisterMode}
+          Already have an account? <button type="button" class="link-btn" on:click={toggleMode}>Sign in</button>
+        {:else}
+          Need an account? <button type="button" class="link-btn" on:click={toggleMode}>Register</button>
+        {/if}
+      </div>
     </form>
 
-    <p class="demo-hint">Demo: <code>admin</code> / <code>Password@123</code></p>
+    {#if !isRegisterMode}
+      <p class="demo-hint">Demo: <code>admin</code> / <code>Password@123</code></p>
+    {/if}
   </div>
 </div>
 
@@ -157,5 +221,24 @@
     background: var(--glass-bg);
     padding: 1px 4px; border-radius: 4px;
     color: var(--accent-cyan);
+  }
+
+  .toggle-mode {
+    text-align: center; font-size: 0.8125rem; color: var(--text-secondary);
+    margin-top: var(--space-2);
+  }
+  .link-btn {
+    background: none; border: none; cursor: pointer; color: var(--accent-cyan);
+    font-weight: 600; font-size: 0.8125rem; padding: 0;
+  }
+  .link-btn:hover { text-decoration: underline; color: var(--accent-primary); }
+
+  .slide-down {
+    animation: slideDown 0.3s ease forwards;
+    transform-origin: top;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 </style>
