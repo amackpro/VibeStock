@@ -146,9 +146,9 @@ class ScannerActivity : AppCompatActivity() {
 
         // Stock status color
         val color = when {
-            p.quantity_in_stock == 0              -> getColor(android.R.color.holo_red_light)
-            p.quantity_in_stock <= p.reorder_level -> getColor(android.R.color.holo_orange_light)
-            else                                   -> getColor(android.R.color.holo_green_light)
+            p.quantity_in_stock == 0              -> ContextCompat.getColor(this, android.R.color.holo_red_light)
+            p.quantity_in_stock <= p.reorder_level -> ContextCompat.getColor(this, android.R.color.holo_orange_light)
+            else                                   -> ContextCompat.getColor(this, android.R.color.holo_green_light)
         }
         binding.tvCurrentStock.setTextColor(color)
     }
