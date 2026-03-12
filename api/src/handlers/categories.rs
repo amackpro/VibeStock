@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, State},
     Json,
 };
 use uuid::Uuid;
@@ -7,69 +7,85 @@ use uuid::Uuid;
 use crate::AppState;
 use shared::{AppError, AppResult, Category, CreateCategoryRequest, UpdateCategoryRequest};
 
+/// GET /api/categories — list all categories ordered by name
 pub async fn list_categories(
     State(state): State<AppState>,
 ) -> AppResult<Json<Vec<Category>>> {
-    let cats = sqlx::query_as!(
-        Category,
-        "SELECT id, name, description, created_at, updated_at FROM categories ORDER BY name"
+    let cats = sqlx::query_as::<_, Category>(
+        "SELECT id, name, description, created_at, updated_at \
+         FROM categories ORDER BY name"
     )
     .fetch_all(&state.db)
     .await?;
     Ok(Json(cats))
 }
 
+/// GET /api/categories/:id
 pub async fn get_category(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<Category>> {
-    let cat = sqlx::query_as!(
-        Category,
-        "SELECT id, name, description, created_at, updated_at FROM categories WHERE id = $1",
-        id
+    let cat = sqlx::query_as::<_, Category>(
+        "SELECT id, name, description, created_at, updated_at \
+         FROM categories WHERE id = $1"
     )
+    .bind(id)
     .fetch_optional(&state.db)
     .await?
     .ok_or_else(|| AppError::NotFound(format!("Category {} not found", id)))?;
     Ok(Json(cat))
 }
 
+/// POST /api/categories
 pub async fn create_category(
     State(state): State<AppState>,
     Json(payload): Json<CreateCategoryRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
     let id = Uuid::new_v4();
-    sqlx::query!(
-        "INSERT INTO categories (id, name, description) VALUES ($1, $2, $3)",
-        id, payload.name, payload.description
+    sqlx::query(
+        "INSERT INTO categories (id, name, description) VALUES ($1, $2, $3)"
     )
+    .bind(id)
+    .bind(&payload.name)
+    .bind(&payload.description)
     .execute(&state.db)
     .await?;
     Ok(Json(serde_json::json!({ "message": "Category created", "id": id })))
 }
 
+/// PUT /api/categories/:id
 pub async fn update_category(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateCategoryRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
-    let rows = sqlx::query!(
-        "UPDATE categories SET name = COALESCE($1, name), description = COALESCE($2, description), updated_at = now() WHERE id = $3",
-        payload.name, payload.description, id
+    let rows = sqlx::query(
+        "UPDATE categories SET \
+         name        = COALESCE($1, name), \
+         description = COALESCE($2, description), \
+         updated_at  = now() \
+         WHERE id = $3"
     )
+    .bind(&payload.name)
+    .bind(&payload.description)
+    .bind(id)
     .execute(&state.db)
     .await?
     .rows_affected();
 
-    if rows == 0 { return Err(AppError::NotFound(format!("Category {} not found", id))); }
+    if rows == 0 {
+        return Err(AppError::NotFound(format!("Category {} not found", id)));
+    }
     Ok(Json(serde_json::json!({ "message": "Category updated" })))
 }
 
+/// DELETE /api/categories/:id
 pub async fn delete_category(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<serde_json::Value>> {
-    sqlx::query!("DELETE FROM categories WHERE id = $1", id)
+    sqlx::query("DELETE FROM categories WHERE id = $1")
+        .bind(id)
         .execute(&state.db)
         .await?;
     Ok(Json(serde_json::json!({ "message": "Category deleted" })))

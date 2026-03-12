@@ -8,7 +8,7 @@ name = "api"
 path = "src/main.rs"
 
 [dependencies]
-shared = { path = "../shared" }
+shared = { path = "../shared", features = ["axum-errors"] }
 tokio = { workspace = true }
 axum = { workspace = true }
 tower = { workspace = true }

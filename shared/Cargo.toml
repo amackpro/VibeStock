@@ -1,13 +1,20 @@
 [package]
-name = "shared"
+name    = "shared"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-serde = { workspace = true }
+serde      = { workspace = true }
 serde_json = { workspace = true }
-uuid = { workspace = true }
-chrono = { workspace = true }
-thiserror = { workspace = true }
-sqlx = { workspace = true }
-validator = { workspace = true }
+uuid       = { workspace = true }
+chrono     = { workspace = true }
+thiserror  = { workspace = true }
+sqlx       = { workspace = true }
+validator  = { workspace = true }
+# Optional: enables axum::IntoResponse impl for AppError (activated by the api crate)
+axum       = { workspace = true, optional = true }
+tracing    = { workspace = true, optional = true }
+
+[features]
+# When enabled, shared compiles an axum::IntoResponse impl for AppError
+axum-errors = ["dep:axum", "dep:tracing"]

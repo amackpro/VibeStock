@@ -108,13 +108,15 @@ pub struct StockMovement {
     pub created_at: DateTime<Utc>,
 }
 
+/// movement_type is stored as String (cast from PG enum via ::text)
+/// so that runtime sqlx::query_as() works without DB type registration.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct StockMovementWithDetails {
     pub id: Uuid,
     pub product_id: Uuid,
     pub product_name: String,
     pub product_sku: String,
-    pub movement_type: MovementType,
+    pub movement_type: String,   // "in" | "out" | "adjustment" | "return"
     pub quantity: i32,
     pub reference: Option<String>,
     pub notes: Option<String>,
@@ -141,7 +143,7 @@ pub struct User {
     #[serde(skip_serializing)]
     pub password_hash: String,
     pub full_name: String,
-    pub role: UserRole,
+    pub role: String,            // stored as text for runtime query compatibility
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

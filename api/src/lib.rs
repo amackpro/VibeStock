@@ -6,7 +6,6 @@ use shared::WsEvent;
 pub mod config;
 pub mod db;
 pub mod auth;
-pub mod errors;
 pub mod handlers;
 pub mod middleware;
 
