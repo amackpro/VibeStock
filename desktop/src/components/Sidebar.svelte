@@ -12,23 +12,27 @@
   const dispatch = createEventDispatcher();
 
   // Navigation items definition
-  const navItems = [
+  const baseNavItems = [
     { id: 'dashboard', label: 'Dashboard',       icon: '⚡' },
     { id: 'products',  label: 'Products',         icon: '📦' },
     { id: 'movements', label: 'Stock Movements',  icon: '🔄' },
     { id: 'suppliers', label: 'Suppliers',         icon: '🏭' },
   ];
 
+  $: user = $authStore.user;
+  $: isAdmin = user?.role === 'admin';
+  $: navItems = isAdmin 
+      ? [...baseNavItems, { id: 'users', label: 'Users (Admin)', icon: '🛡️' }]
+      : baseNavItems;
+
   function nav(id) { dispatch('navigate', id); }
-  
+
   function logout() {
     if (confirm("Are you sure you want to log out?")) {
       authStore.logout();
-      toast.success("Logged out successfully");
+      import('../stores/toast.js').then(({ toast }) => toast.success("Logged out successfully"));
     }
   }
-
-  $: user = $authStore.user;
 </script>
 
 <aside class="sidebar">

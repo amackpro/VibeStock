@@ -27,6 +27,7 @@ use api::{
         stock_movements::{create_movement, list_movements},
         suppliers::{create_supplier, delete_supplier, get_supplier, list_suppliers, update_supplier},
         websocket::ws_handler,
+        users::{list_users, update_user_role, toggle_user_status},
     },
     AppState, InnerState,
 };
@@ -76,6 +77,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/suppliers/:id",  get(get_supplier).put(update_supplier).delete(delete_supplier))
         // Stock Movements
         .route("/movements",  get(list_movements).post(create_movement))
+        // Admin: User Management
+        .route("/users",             get(list_users))
+        .route("/users/:id/role",    post(update_user_role))
+        .route("/users/:id/status",  post(toggle_user_status))
         // Apply auth middleware
         .layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
 

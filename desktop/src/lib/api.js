@@ -80,6 +80,13 @@ export const api = {
     list:   (params = {}) => request('GET',  `/api/movements?${new URLSearchParams(params)}`),
     create: (data)        => request('POST', '/api/movements', data),
   },
+
+  // ── Users (Admin Only) ──────────────────────────────────────────────────────
+  users: {
+    list:         ()          => request('GET',   '/api/users'),
+    updateRole:   (id, role)  => request('PATCH', `/api/users/${id}/role`, { role }),
+    toggleStatus: (id, state) => request('PATCH', `/api/users/${id}/status`, { is_active: state }),
+  },
 };
 
 // ── WebSocket helper ──────────────────────────────────────────────────────────

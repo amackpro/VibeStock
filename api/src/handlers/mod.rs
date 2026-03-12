@@ -5,3 +5,4 @@ pub mod suppliers;
 pub mod stock_movements;
 pub mod dashboard;
 pub mod websocket;
+pub mod users;

@@ -19,6 +19,7 @@
   import Products  from './routes/Products.svelte';
   import Suppliers from './routes/Suppliers.svelte';
   import Movements from './routes/Movements.svelte';
+  import Users     from './routes/Users.svelte';
 
   // ── Routing ─────────────────────────────────────────────────────────────────
   let page = 'dashboard'; // default page
@@ -63,6 +64,8 @@
         <Suppliers />
       {:else if page === 'movements'}
         <Movements />
+      {:else if page === 'users'}
+        <Users />
       {/if}
     </main>
   </div>
