@@ -6,6 +6,7 @@
   import { api }       from '../lib/api.js';
   import { authStore } from '../stores/auth.js';
   import { toast }     from '../stores/toast.js';
+  import { themeStore } from '../stores/theme.js';
 
   let isRegisterMode = false;
   let username = '';
@@ -53,6 +54,11 @@
 
 <!-- Full-screen login with animated gradient mesh background -->
 <div class="login-screen">
+  <!-- Theme Toggle -->
+  <button class="theme-toggle top-right" on:click={themeStore.toggle} title="Toggle Dark/Light Mode">
+    {$themeStore === 'dark' ? '☀️' : '🌙'}
+  </button>
+
   <!-- Decorative blobs -->
   <div class="blob blob-1"></div>
   <div class="blob blob-2"></div>
@@ -164,6 +170,17 @@
     display: flex; align-items: center; justify-content: center;
     background: var(--bg-base);
     position: relative; overflow: hidden;
+  }
+
+  .theme-toggle.top-right {
+    position: absolute; top: var(--space-6); right: var(--space-6); z-index: 10;
+    background: var(--glass-card); border: 1px solid var(--border-glass);
+    cursor: pointer; font-size: 1.5rem; padding: var(--space-2);
+    border-radius: var(--radius-full); box-shadow: var(--shadow-sm);
+    color: var(--text-secondary); transition: all var(--transition-fast);
+  }
+  .theme-toggle.top-right:hover {
+    color: var(--text-primary); transform: scale(1.1); background: var(--glass-hover);
   }
 
   /* Animated ethereal background blobs - Toned Down & GPU Optimized */
