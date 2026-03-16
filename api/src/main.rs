@@ -35,12 +35,21 @@ use shared::WsEvent;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // ── Tracing ──────────────────────────────────────────────────────────────
+    let config = Config::from_env()?;
+
+    let log_filter = if config.is_production {
+        "api=info,tower_http=info".to_string()
+    } else {
+        "api=debug,tower_http=debug".to_string()
+    };
+
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| "api=debug,tower_http=debug".into()))
+            .unwrap_or_else(|_| log_filter.into()))
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    tracing::info!("Starting VibeStock API...");
 
     // ── Config & DB ───────────────────────────────────────────────────────────
     let config = Config::from_env()?;
