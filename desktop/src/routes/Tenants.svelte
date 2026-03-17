@@ -3,6 +3,7 @@
   import { api }     from '../lib/api.js';
   import { toast }   from '../stores/toast.js';
   import { authStore } from '../stores/auth.js';
+  import { Building2, User, Package, Factory, Trash2 } from 'lucide-svelte';
 
   let tenants = [];
   let loading = true;
@@ -157,7 +158,7 @@
             <tr class="stagger-row" class:inactive={!t.is_active} style="animation-delay: {100 + (i * 50)}ms">
               <td>
                 <div class="tenant-info">
-                  <div class="tenant-avatar">🏢</div>
+                  <div class="tenant-avatar"><Building2 size={20} /></div>
                   <div>
                     <div style="font-weight:600">{t.name}</div>
                     <div style="font-size:0.75rem;color:var(--text-muted)">ID: {t.id.slice(0,8)}...</div>
@@ -169,9 +170,9 @@
               </td>
               <td>
                 <div class="stats-grid">
-                  <span class="stat">👤 {t.total_users || 0}</span>
-                  <span class="stat">📦 {t.total_products || 0}</span>
-                  <span class="stat">🏭 {t.total_suppliers || 0}</span>
+                  <span class="stat"><User size={14} /> {t.total_users || 0}</span>
+                  <span class="stat"><Package size={14} /> {t.total_products || 0}</span>
+                  <span class="stat"><Factory size={14} /> {t.total_suppliers || 0}</span>
                 </div>
               </td>
               <td>
@@ -199,7 +200,7 @@
                     disabled={processing}
                     title="Delete Tenant"
                   >
-                    🗑️
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </td>

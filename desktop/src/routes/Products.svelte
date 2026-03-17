@@ -11,7 +11,7 @@
   import { onMount } from 'svelte';
   import { api }   from '../lib/api.js';
   import { toast } from '../stores/toast.js';
-  import { Pencil, Trash2, X } from 'lucide-svelte';
+  import { Pencil, Trash2, X, Search } from 'lucide-svelte';
 
   // ── State ────────────────────────────────────────────────────────────────────
   let products       = [];
@@ -142,7 +142,7 @@
     <div class="flex gap-4">
       <!-- Search -->
       <div class="search-bar" style="width:240px">
-        <span>🔍</span>
+        <Search size={16} />
         <input
           id="product-search"
           type="text"

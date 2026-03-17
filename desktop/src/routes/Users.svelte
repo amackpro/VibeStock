@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { api }     from '../lib/api.js';
   import { toast }   from '../stores/toast.js';
+  import { Ban } from 'lucide-svelte';
 
   let users = [];
   let loading = true;
@@ -138,7 +139,8 @@
                     disabled={processingId === u.id}
                     title="Suspend User"
                   >
-                    🚫 Block
+                    <Ban size={14} />
+                    <span>Block</span>
                   </button>
                 {:else}
                   <button 

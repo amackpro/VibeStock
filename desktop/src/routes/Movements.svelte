@@ -8,7 +8,7 @@
   import { onMount } from 'svelte';
   import { api }   from '../lib/api.js';
   import { toast } from '../stores/toast.js';
-  import { X } from 'lucide-svelte';
+  import { X, Package, Truck, Wrench, Undo2 } from 'lucide-svelte';
 
   let movements  = [];
   let products   = [];
@@ -188,13 +188,13 @@
           <!-- Movement type hint -->
           <div class="hint-box">
             {#if form.movement_type === 'in'}
-              <p>📦 Stock will be <strong>added</strong> to the current quantity.</p>
+              <p><Package size={14} /> Stock will be <strong>added</strong> to the current quantity.</p>
             {:else if form.movement_type === 'out'}
-              <p>🚚 Stock will be <strong>deducted</strong>. Fails if insufficient.</p>
+              <p><Truck size={14} /> Stock will be <strong>deducted</strong>. Fails if insufficient.</p>
             {:else if form.movement_type === 'adjustment'}
-              <p>🔧 Sets quantity to the value entered (audit correction).</p>
+              <p><Wrench size={14} /> Sets quantity to the value entered (audit correction).</p>
             {:else if form.movement_type === 'return'}
-              <p>↩️ Returned stock will be <strong>added</strong> back to inventory.</p>
+              <p><Undo2 size={14} /> Returned stock will be <strong>added</strong> back to inventory.</p>
             {/if}
           </div>
         </div>

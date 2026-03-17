@@ -7,7 +7,7 @@
   import { authStore } from '../stores/auth.js';
   import { toast }     from '../stores/toast.js';
   import { themeStore } from '../stores/theme.js';
-  import { Zap } from 'lucide-svelte';
+  import { Zap, Sun, Moon } from 'lucide-svelte';
 
   let isRegisterMode = false;
   let username = '';
@@ -57,7 +57,11 @@
 <div class="login-screen">
   <!-- Theme Toggle -->
   <button class="theme-toggle top-right" on:click={themeStore.toggle} title="Toggle Dark/Light Mode">
-    {$themeStore === 'dark' ? '☀️' : '🌙'}
+    {#if $themeStore === 'dark'}
+      <Sun size={20} />
+    {:else}
+      <Moon size={20} />
+    {/if}
   </button>
 
   <!-- Decorative blobs -->
