@@ -11,9 +11,9 @@ const STORAGE_KEY = 'vibestock_auth';
 function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { token: null, user: null };
+    return raw ? JSON.parse(raw) : { token: null, user: null, tenant: null, accessibleTenants: [] };
   } catch {
-    return { token: null, user: null };
+    return { token: null, user: null, tenant: null, accessibleTenants: [] };
   }
 }
 
@@ -28,20 +28,38 @@ function createAuthStore() {
       const state = {
         token: loginResponse.token,
         user: {
-          id:        loginResponse.user_id,
-          username:  loginResponse.username,
-          full_name: loginResponse.full_name,
-          role:      loginResponse.role,
+          id:               loginResponse.user_id,
+          username:         loginResponse.username,
+          full_name:        loginResponse.full_name,
+          role:             loginResponse.role,
+          is_global_admin:   loginResponse.is_global_admin,
         },
+        tenant: {
+          id:               loginResponse.tenant_id,
+          name:             loginResponse.tenant_name,
+        },
+        accessibleTenants: loginResponse.accessible_tenants || [],
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       set(state);
     },
 
+    /** Switch to a different tenant (for global admins) */
+    switchTenant(tenantId) {
+      update(state => {
+        const newTenant = state.accessibleTenants.find(t => t.id === tenantId);
+        if (newTenant) {
+          state.tenant = { id: newTenant.id, name: newTenant.name };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+        return state;
+      });
+    },
+
     /** Clear session on logout */
     logout() {
       localStorage.removeItem(STORAGE_KEY);
-      set({ token: null, user: null });
+      set({ token: null, user: null, tenant: null, accessibleTenants: [] });
     },
 
     /** Check if currently authenticated */

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -12,6 +13,41 @@ pub struct LoginRequest {
     pub password: String,
 }
 
+#[derive(Debug, Deserialize, Validate)]
+pub struct RegisterRequest {
+    #[validate(length(min = 3, max = 50))]
+    pub username: String,
+    #[validate(email)]
+    pub email: String,
+    #[validate(length(min = 6))]
+    pub password: String,
+    #[validate(length(min = 1, max = 255))]
+    pub full_name: String,
+    pub tenant_id: Option<Uuid>,
+    pub tenant_name: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreateTenantRequest {
+    #[validate(length(min = 1, max = 255))]
+    pub name: String,
+    #[validate(length(min = 1, max = 100))]
+    pub slug: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateTenantRequest {
+    pub name: Option<String>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct TenantInfo {
+    pub id: Uuid,
+    pub name: String,
+    pub slug: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct LoginResponse {
     pub token: String,
@@ -19,6 +55,10 @@ pub struct LoginResponse {
     pub username: String,
     pub full_name: String,
     pub role: String,
+    pub tenant_id: Uuid,
+    pub tenant_name: String,
+    pub is_global_admin: bool,
+    pub accessible_tenants: Vec<TenantInfo>,
 }
 
 // ─── Product DTOs ─────────────────────────────────────────────────────────────
@@ -145,7 +185,13 @@ pub struct PaginatedResponse<T> {
 impl<T> PaginatedResponse<T> {
     pub fn new(data: Vec<T>, total: i64, page: i64, per_page: i64) -> Self {
         let total_pages = (total + per_page - 1) / per_page;
-        Self { data, total, page, per_page, total_pages }
+        Self {
+            data,
+            total,
+            page,
+            per_page,
+            total_pages,
+        }
     }
 }
 
@@ -154,7 +200,20 @@ impl<T> PaginatedResponse<T> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event", content = "payload")]
 pub enum WsEvent {
-    StockUpdated { product_id: Uuid, product_name: String, new_quantity: i32 },
-    LowStock     { product_id: Uuid, product_name: String, quantity: i32, reorder_level: i32 },
-    NewMovement  { product_id: Uuid, movement_type: String, quantity: i32 },
+    StockUpdated {
+        product_id: Uuid,
+        product_name: String,
+        new_quantity: i32,
+    },
+    LowStock {
+        product_id: Uuid,
+        product_name: String,
+        quantity: i32,
+        reorder_level: i32,
+    },
+    NewMovement {
+        product_id: Uuid,
+        movement_type: String,
+        quantity: i32,
+    },
 }

@@ -14,9 +14,11 @@ use shared::AppError;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
-    pub sub: Uuid,        // user id
+    pub sub: Uuid,           // user id
     pub username: String,
     pub role: String,
+    pub tenant_id: Uuid,
+    pub is_global_admin: bool,
     pub exp: i64,
     pub iat: i64,
 }
@@ -25,6 +27,8 @@ pub fn create_token(
     user_id: Uuid,
     username: &str,
     role: &str,
+    tenant_id: Uuid,
+    is_global_admin: bool,
     secret: &str,
     expiry_hours: i64,
 ) -> Result<String, AppError> {
@@ -33,6 +37,8 @@ pub fn create_token(
         sub: user_id,
         username: username.to_owned(),
         role: role.to_owned(),
+        tenant_id,
+        is_global_admin,
         iat: now.timestamp(),
         exp: (now + Duration::hours(expiry_hours)).timestamp(),
     };
@@ -58,6 +64,13 @@ pub fn extract_token(headers: &HeaderMap) -> Option<String> {
         .map(|t| t.to_owned())
 }
 
+pub fn extract_tenant_id(headers: &HeaderMap) -> Option<Uuid> {
+    headers
+        .get("X-Tenant-ID")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| Uuid::parse_str(v).ok())
+}
+
 // ─── Auth Middleware ──────────────────────────────────────────────────────────
 
 pub async fn auth_middleware(
@@ -68,6 +81,16 @@ pub async fn auth_middleware(
     let token = extract_token(req.headers())
         .ok_or_else(|| AppError::Unauthorized("Missing Authorization header".into()))?;
     let claims = verify_token(&token, &state.config.jwt_secret)?;
+    
+    let header_tenant_id = extract_tenant_id(req.headers());
+    
+    let effective_tenant_id = if claims.is_global_admin {
+        header_tenant_id.unwrap_or(claims.tenant_id)
+    } else {
+        claims.tenant_id
+    };
+    
     req.extensions_mut().insert(claims);
+    req.extensions_mut().insert(effective_tenant_id);
     Ok(next.run(req).await)
 }

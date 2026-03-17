@@ -10,6 +10,7 @@ use shared::{AppError, AppResult, PaginatedResponse, PaginationParams, ProductWi
 /// GET /api/products — paginated, searchable product list with category/supplier join
 pub async fn list_products(
     State(state): State<AppState>,
+    Extension(tenant_id): Extension<Uuid>,
     Query(params): Query<PaginationParams>,
 ) -> AppResult<Json<PaginatedResponse<ProductWithDetails>>> {
     let search  = format!("%{}%", params.search.as_deref().unwrap_or(""));
@@ -18,15 +19,16 @@ pub async fn list_products(
     let page    = params.page.unwrap_or(1);
 
     let total: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM products p WHERE p.is_active = true \
-         AND (p.name ILIKE $1 OR p.sku ILIKE $1)"
+        "SELECT COUNT(*) FROM products p WHERE p.tenant_id = $1 AND p.is_active = true \
+         AND (p.name ILIKE $2 OR p.sku ILIKE $2)"
     )
+    .bind(tenant_id)
     .bind(&search)
     .fetch_one(&state.db)
     .await?;
 
     let products = sqlx::query_as::<_, ProductWithDetails>(
-        "SELECT p.id, p.name, p.description, p.sku, p.barcode,
+        "SELECT p.id, p.tenant_id, p.name, p.description, p.sku, p.barcode,
                 p.category_id, c.name AS category_name,
                 p.supplier_id, s.name AS supplier_name,
                 p.unit_price, p.cost_price,
@@ -36,10 +38,11 @@ pub async fn list_products(
          FROM products p
          LEFT JOIN categories c ON c.id = p.category_id
          LEFT JOIN suppliers  s ON s.id = p.supplier_id
-         WHERE p.is_active = true AND (p.name ILIKE $1 OR p.sku ILIKE $1)
+         WHERE p.tenant_id = $1 AND p.is_active = true AND (p.name ILIKE $2 OR p.sku ILIKE $2)
          ORDER BY p.name ASC
-         LIMIT $2 OFFSET $3"
+         LIMIT $3 OFFSET $4"
     )
+    .bind(tenant_id)
     .bind(&search)
     .bind(limit)
     .bind(offset)
@@ -52,10 +55,11 @@ pub async fn list_products(
 /// GET /api/products/:id
 pub async fn get_product(
     State(state): State<AppState>,
+    Extension(tenant_id): Extension<Uuid>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<ProductWithDetails>> {
     let product = sqlx::query_as::<_, ProductWithDetails>(
-        "SELECT p.id, p.name, p.description, p.sku, p.barcode,
+        "SELECT p.id, p.tenant_id, p.name, p.description, p.sku, p.barcode,
                 p.category_id, c.name AS category_name,
                 p.supplier_id, s.name AS supplier_name,
                 p.unit_price, p.cost_price,
@@ -65,9 +69,10 @@ pub async fn get_product(
          FROM products p
          LEFT JOIN categories c ON c.id = p.category_id
          LEFT JOIN suppliers  s ON s.id = p.supplier_id
-         WHERE p.id = $1"
+         WHERE p.id = $1 AND p.tenant_id = $2"
     )
     .bind(id)
+    .bind(tenant_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or_else(|| AppError::NotFound(format!("Product {} not found", id)))?;
@@ -78,10 +83,11 @@ pub async fn get_product(
 /// GET /api/products/barcode/:barcode — used by Android scanner
 pub async fn get_product_by_barcode(
     State(state): State<AppState>,
+    Extension(tenant_id): Extension<Uuid>,
     Path(barcode): Path<String>,
 ) -> AppResult<Json<ProductWithDetails>> {
     let product = sqlx::query_as::<_, ProductWithDetails>(
-        "SELECT p.id, p.name, p.description, p.sku, p.barcode,
+        "SELECT p.id, p.tenant_id, p.name, p.description, p.sku, p.barcode,
                 p.category_id, c.name AS category_name,
                 p.supplier_id, s.name AS supplier_name,
                 p.unit_price, p.cost_price,
@@ -91,9 +97,10 @@ pub async fn get_product_by_barcode(
          FROM products p
          LEFT JOIN categories c ON c.id = p.category_id
          LEFT JOIN suppliers  s ON s.id = p.supplier_id
-         WHERE p.barcode = $1 AND p.is_active = true"
+         WHERE p.barcode = $1 AND p.tenant_id = $2 AND p.is_active = true"
     )
     .bind(&barcode)
+    .bind(tenant_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or_else(|| AppError::NotFound(format!("No product with barcode {}", barcode)))?;
@@ -104,13 +111,17 @@ pub async fn get_product_by_barcode(
 /// POST /api/products
 pub async fn create_product(
     State(state): State<AppState>,
+    Extension(tenant_id): Extension<Uuid>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<shared::CreateProductRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
-    let exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM products WHERE sku = $1")
-        .bind(&payload.sku)
-        .fetch_one(&state.db)
-        .await?;
+    let exists: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM products WHERE tenant_id = $1 AND sku = $2"
+    )
+    .bind(tenant_id)
+    .bind(&payload.sku)
+    .fetch_one(&state.db)
+    .await?;
 
     if exists > 0 {
         return Err(AppError::Conflict(format!("SKU '{}' already exists", payload.sku)));
@@ -119,11 +130,12 @@ pub async fn create_product(
     let id = Uuid::new_v4();
     sqlx::query(
         "INSERT INTO products
-         (id, name, description, sku, barcode, category_id, supplier_id,
+         (id, tenant_id, name, description, sku, barcode, category_id, supplier_id,
           unit_price, cost_price, quantity_in_stock, reorder_level, unit_of_measure, image_url)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)"
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)"
     )
     .bind(id)
+    .bind(tenant_id)
     .bind(&payload.name)
     .bind(&payload.description)
     .bind(&payload.sku)
@@ -146,6 +158,7 @@ pub async fn create_product(
 /// PUT /api/products/:id
 pub async fn update_product(
     State(state): State<AppState>,
+    Extension(tenant_id): Extension<Uuid>,
     Path(id): Path<Uuid>,
     Json(payload): Json<shared::UpdateProductRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
@@ -163,7 +176,7 @@ pub async fn update_product(
          is_active         = COALESCE($10, is_active),
          image_url         = COALESCE($11, image_url),
          updated_at        = now()
-         WHERE id = $12"
+         WHERE id = $12 AND tenant_id = $13"
     )
     .bind(&payload.name)
     .bind(&payload.description)
@@ -177,6 +190,7 @@ pub async fn update_product(
     .bind(payload.is_active)
     .bind(&payload.image_url)
     .bind(id)
+    .bind(tenant_id)
     .execute(&state.db)
     .await?
     .rows_affected();
@@ -190,12 +204,14 @@ pub async fn update_product(
 /// DELETE /api/products/:id — soft delete
 pub async fn delete_product(
     State(state): State<AppState>,
+    Extension(tenant_id): Extension<Uuid>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<serde_json::Value>> {
     let rows = sqlx::query(
-        "UPDATE products SET is_active = false, updated_at = now() WHERE id = $1"
+        "UPDATE products SET is_active = false, updated_at = now() WHERE id = $1 AND tenant_id = $2"
     )
     .bind(id)
+    .bind(tenant_id)
     .execute(&state.db)
     .await?
     .rows_affected();

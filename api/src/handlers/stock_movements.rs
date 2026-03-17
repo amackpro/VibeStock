@@ -13,18 +13,22 @@ use shared::{
 /// GET /api/movements — paginated stock movement history
 pub async fn list_movements(
     State(state): State<AppState>,
+    Extension(tenant_id): Extension<Uuid>,
     Query(params): Query<PaginationParams>,
 ) -> AppResult<Json<PaginatedResponse<StockMovementWithDetails>>> {
     let limit  = params.limit();
     let offset = params.offset();
     let page   = params.page.unwrap_or(1);
 
-    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM stock_movements")
-        .fetch_one(&state.db)
-        .await?;
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM stock_movements WHERE tenant_id = $1"
+    )
+    .bind(tenant_id)
+    .fetch_one(&state.db)
+    .await?;
 
     let movements = sqlx::query_as::<_, StockMovementWithDetails>(
-        "SELECT sm.id,
+        "SELECT sm.id, sm.tenant_id,
                 sm.product_id,
                 p.name        AS product_name,
                 p.sku         AS product_sku,
@@ -38,9 +42,11 @@ pub async fn list_movements(
          FROM stock_movements sm
          JOIN products p ON p.id = sm.product_id
          JOIN users u    ON u.id = sm.performed_by
+         WHERE sm.tenant_id = $1
          ORDER BY sm.created_at DESC
-         LIMIT $1 OFFSET $2"
+         LIMIT $2 OFFSET $3"
     )
+    .bind(tenant_id)
     .bind(limit)
     .bind(offset)
     .fetch_all(&state.db)
@@ -52,6 +58,7 @@ pub async fn list_movements(
 /// POST /api/movements — atomically records movement and updates stock quantity
 pub async fn create_movement(
     State(state): State<AppState>,
+    Extension(tenant_id): Extension<Uuid>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateStockMovementRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
@@ -70,9 +77,10 @@ pub async fn create_movement(
 
     let product = sqlx::query_as::<_, ProductRow>(
         "SELECT id, name, quantity_in_stock, reorder_level \
-         FROM products WHERE id = $1 AND is_active = true"
+         FROM products WHERE id = $1 AND tenant_id = $2 AND is_active = true"
     )
     .bind(payload.product_id)
+    .bind(tenant_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or_else(|| AppError::NotFound(format!("Product {} not found", payload.product_id)))?;
@@ -98,10 +106,11 @@ pub async fn create_movement(
     let mt = payload.movement_type.as_str();
     sqlx::query(
         "INSERT INTO stock_movements \
-         (id, product_id, movement_type, quantity, reference, notes, performed_by) \
-         VALUES ($1, $2, $3::movement_type, $4, $5, $6, $7)"
+         (id, tenant_id, product_id, movement_type, quantity, reference, notes, performed_by) \
+         VALUES ($1, $2, $3, $4::movement_type, $5, $6, $7, $8)"
     )
     .bind(id)
+    .bind(tenant_id)
     .bind(payload.product_id)
     .bind(mt)
     .bind(payload.quantity)

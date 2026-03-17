@@ -17,11 +17,18 @@ function getToken() {
   return get(authStore).token;
 }
 
+/** Get current tenant ID from store */
+function getTenantId() {
+  return get(authStore).tenant?.id;
+}
+
 /** Core fetch wrapper — attaches auth header, throws on non-2xx */
 async function request(method, path, body = null) {
   const token = getToken();
+  const tenantId = getTenantId();
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (tenantId) headers['X-Tenant-ID'] = tenantId;
 
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
@@ -86,6 +93,15 @@ export const api = {
     list:         ()          => request('GET',   '/api/users'),
     updateRole:   (id, role)  => request('PATCH', `/api/users/${id}/role`, { role }),
     toggleStatus: (id, state) => request('PATCH', `/api/users/${id}/status`, { is_active: state }),
+  },
+
+  // ── Tenants (Global Admin Only) ───────────────────────────────────────────────
+  tenants: {
+    list:   ()          => request('GET',   '/api/tenants'),
+    get:    (id)        => request('GET',   `/api/tenants/${id}`),
+    create: (data)      => request('POST',  '/api/tenants', data),
+    update: (id, data)  => request('PUT',  `/api/tenants/${id}`, data),
+    delete: (id)        => request('DELETE', `/api/tenants/${id}`),
   },
 };
 

@@ -8,9 +8,12 @@
   import { authStore } from '../stores/auth.js';
   import { toast } from '../stores/toast.js';
   import { themeStore } from '../stores/theme.js';
+  import { api } from '../lib/api.js';
 
   export let activePage = 'dashboard';
   const dispatch = createEventDispatcher();
+
+  let showTenantDropdown = false;
 
   // Navigation items definition
   const baseNavItems = [
@@ -21,12 +24,32 @@
   ];
 
   $: user = $authStore.user;
+  $: tenant = $authStore.tenant;
+  $: accessibleTenants = $authStore.accessibleTenants || [];
+  $: isGlobalAdmin = user?.is_global_admin === true;
   $: isAdmin = user?.role === 'admin';
-  $: navItems = isAdmin 
-      ? [...baseNavItems, { id: 'users', label: 'Users (Admin)', icon: '🛡️' }]
-      : baseNavItems;
+  
+  $: navItems = [
+    ...baseNavItems,
+    ...(isAdmin ? [{ id: 'users', label: 'Users (Admin)', icon: '🛡️' }] : []),
+    ...(isGlobalAdmin ? [{ id: 'tenants', label: 'Tenants', icon: '🏢' }] : [])
+  ];
 
   function nav(id) { dispatch('navigate', id); }
+
+  async function switchTenant(tenantId) {
+    const currentTenantId = tenant?.id;
+    
+    if (tenantId === currentTenantId) {
+      showTenantDropdown = false;
+      return;
+    }
+
+    authStore.switchTenant(tenantId);
+    toast.success(`Switched to tenant`);
+    showTenantDropdown = false;
+    window.location.reload();
+  }
 
   function logout() {
     if (confirm("Are you sure you want to log out?")) {
@@ -72,13 +95,49 @@
 
   <!-- User footer -->
   <div class="sidebar-footer">
+    <!-- Tenant Switcher (for global admins) -->
+    {#if isGlobalAdmin && accessibleTenants.length > 1}
+      <div class="tenant-switcher">
+        <button 
+          class="tenant-btn" 
+          on:click={() => showTenantDropdown = !showTenantDropdown}
+          title="Switch Tenant"
+        >
+          <span class="tenant-icon">🏢</span>
+          <span class="tenant-name">{tenant?.name || 'Select Tenant'}</span>
+          <span class="tenant-arrow">{showTenantDropdown ? '▲' : '▼'}</span>
+        </button>
+        {#if showTenantDropdown}
+          <div class="tenant-dropdown">
+            {#each accessibleTenants as t}
+              <button 
+                class="tenant-option" 
+                class:active={t.id === tenant?.id}
+                on:click={() => switchTenant(t.id)}
+              >
+                {t.name}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {:else if tenant}
+      <div class="tenant-badge" title="Current Tenant">
+        <span class="tenant-icon">🏢</span>
+        <span class="tenant-name">{tenant.name}</span>
+      </div>
+    {/if}
+
     <div class="user-card">
       <div class="user-avatar">
         {user?.full_name?.charAt(0).toUpperCase() ?? 'U'}
       </div>
       <div class="user-info">
         <div class="user-name">{user?.full_name ?? 'User'}</div>
-        <div class="user-role">{user?.role ?? 'staff'}</div>
+        <div class="user-role">
+          {user?.role ?? 'staff'}
+          {#if isGlobalAdmin} <span class="global-badge">Global</span>{/if}
+        </div>
       </div>
     </div>
     <button class="logout-btn" on:click={logout} title="Logout">⏏</button>
@@ -190,7 +249,8 @@
     font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
   }
   .user-name { font-size: 0.8125rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .user-role { font-size: 0.7rem; color: var(--text-muted); text-transform: capitalize; }
+  .user-role { font-size: 0.7rem; color: var(--text-muted); text-transform: capitalize; display: flex; align-items: center; gap: 4px; }
+  .global-badge { font-size: 0.6rem; background: var(--accent-primary); color: white; padding: 1px 4px; border-radius: 4px; }
   .logout-btn {
     background: none; border: none; cursor: pointer;
     color: var(--text-muted); font-size: 1.1rem; padding: 4px;
@@ -198,4 +258,56 @@
     transition: color var(--transition-fast);
   }
   .logout-btn:hover { color: var(--accent-red); }
+
+  /* Tenant Switcher */
+  .tenant-switcher { position: relative; width: 100%; margin-bottom: var(--space-2); }
+  .tenant-btn {
+    width: 100%;
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-surface);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .tenant-btn:hover { background: var(--glass-hover); color: var(--text-primary); }
+  .tenant-icon { font-size: 0.875rem; }
+  .tenant-name { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tenant-arrow { font-size: 0.5rem; opacity: 0.7; }
+  .tenant-dropdown {
+    position: absolute; bottom: 100%; left: 0; right: 0;
+    background: var(--glass-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-1);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+  }
+  .tenant-option {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .tenant-option:hover { background: var(--glass-hover); color: var(--text-primary); }
+  .tenant-option.active { background: rgba(139,92,246,0.2); color: var(--accent-primary); }
+  .tenant-badge {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    width: 100%;
+  }
 </style>

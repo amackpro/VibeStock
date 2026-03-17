@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     middleware,
-    routing::{get, post, patch},
+    routing::{delete, get, patch, post},
     Router,
 };
 use tokio::sync::broadcast;
@@ -26,6 +26,7 @@ use api::{
         },
         stock_movements::{create_movement, list_movements},
         suppliers::{create_supplier, delete_supplier, get_supplier, list_suppliers, update_supplier},
+        tenants::{create_tenant, delete_tenant, get_tenant, list_tenants, update_tenant},
         websocket::ws_handler,
         users::{list_users, update_user_role, toggle_user_status},
     },
@@ -81,6 +82,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/users",             get(list_users))
         .route("/users/:id/role",    patch(update_user_role))
         .route("/users/:id/status",  patch(toggle_user_status))
+        // Tenants (global admin only)
+        .route("/tenants",           get(list_tenants).post(create_tenant))
+        .route("/tenants/:id",       get(get_tenant).put(update_tenant).delete(delete_tenant))
         // Apply auth middleware
         .layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
 

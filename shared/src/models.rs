@@ -3,11 +3,38 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+// ─── Tenant ─────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Tenant {
+    pub id: Uuid,
+    pub name: String,
+    pub slug: String,
+    pub owner_user_id: Option<Uuid>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TenantWithStats {
+    pub id: Uuid,
+    pub name: String,
+    pub slug: String,
+    pub owner_user_id: Option<Uuid>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub total_users: i64,
+    pub total_products: i64,
+    pub total_suppliers: i64,
+}
+
 // ─── Category ────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Category {
     pub id: Uuid,
+    pub tenant_id: Uuid,
     pub name: String,
     pub description: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -19,6 +46,7 @@ pub struct Category {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Supplier {
     pub id: Uuid,
+    pub tenant_id: Uuid,
     pub name: String,
     pub contact_name: Option<String>,
     pub email: Option<String>,
@@ -33,6 +61,7 @@ pub struct Supplier {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Product {
     pub id: Uuid,
+    pub tenant_id: Uuid,
     pub name: String,
     pub description: Option<String>,
     pub sku: String,
@@ -55,6 +84,7 @@ pub struct Product {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ProductWithDetails {
     pub id: Uuid,
+    pub tenant_id: Uuid,
     pub name: String,
     pub description: Option<String>,
     pub sku: String,
@@ -99,6 +129,7 @@ impl std::fmt::Display for MovementType {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct StockMovement {
     pub id: Uuid,
+    pub tenant_id: Uuid,
     pub product_id: Uuid,
     pub movement_type: MovementType,
     pub quantity: i32,
@@ -113,10 +144,11 @@ pub struct StockMovement {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct StockMovementWithDetails {
     pub id: Uuid,
+    pub tenant_id: Uuid,
     pub product_id: Uuid,
     pub product_name: String,
     pub product_sku: String,
-    pub movement_type: String,   // "in" | "out" | "adjustment" | "return"
+    pub movement_type: String, // "in" | "out" | "adjustment" | "return"
     pub quantity: i32,
     pub reference: Option<String>,
     pub notes: Option<String>,
@@ -138,12 +170,29 @@ pub enum UserRole {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct User {
     pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub is_global_admin: bool,
     pub username: String,
     pub email: String,
     #[serde(skip_serializing)]
     pub password_hash: String,
     pub full_name: String,
-    pub role: String,            // stored as text for runtime query compatibility
+    pub role: String, // stored as text for runtime query compatibility
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct UserWithTenant {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub tenant_name: Option<String>,
+    pub is_global_admin: bool,
+    pub username: String,
+    pub email: String,
+    pub full_name: String,
+    pub role: String,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
