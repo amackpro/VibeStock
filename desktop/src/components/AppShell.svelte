@@ -245,9 +245,11 @@
     overflow: hidden;
   }
 
-  /* Sidebar */
+  /* Sidebar - Dynamic width */
   .sidebar {
-    width: 260px;
+    width: 18vw;
+    min-width: 180px;
+    max-width: 320px;
     height: 100vh;
     position: fixed;
     left: 0;
@@ -263,7 +265,9 @@
   }
 
   .collapsed .sidebar {
-    width: 72px;
+    width: 5vw;
+    min-width: 56px;
+    max-width: 72px;
   }
 
   .sidebar-header {
@@ -425,7 +429,8 @@
   /* Main Area */
   .main-area {
     flex: 1;
-    margin-left: 260px;
+    margin-left: 18vw;
+    min-width: 180px;
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -433,7 +438,8 @@
   }
 
   .collapsed .main-area {
-    margin-left: 72px;
+    margin-left: 5vw;
+    min-width: 56px;
   }
 
   /* Header */
