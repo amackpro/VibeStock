@@ -7,6 +7,7 @@
   import { authStore } from '../stores/auth.js';
   import { toast }     from '../stores/toast.js';
   import { themeStore } from '../stores/theme.js';
+  import { Zap } from 'lucide-svelte';
 
   let isRegisterMode = false;
   let username = '';
@@ -66,7 +67,9 @@
   <div class="login-card card stagger-row">
     <!-- Logo -->
     <div class="login-logo stagger-row">
-      <div class="logo-icon">⚡</div>
+      <div class="logo-icon">
+        <Zap size={28} />
+      </div>
       <h1 class="logo-title">VibeStock</h1>
       <p class="logo-sub">Inventory Management System</p>
     </div>

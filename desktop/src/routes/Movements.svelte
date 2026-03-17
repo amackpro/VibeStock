@@ -8,6 +8,7 @@
   import { onMount } from 'svelte';
   import { api }   from '../lib/api.js';
   import { toast } from '../stores/toast.js';
+  import { X } from 'lucide-svelte';
 
   let movements  = [];
   let products   = [];
@@ -148,7 +149,9 @@
     <div class="modal">
       <div class="modal-header">
         <h3>Record Stock Movement</h3>
-        <button class="btn btn-ghost btn-icon" on:click={closeModal}>✕</button>
+        <button class="btn btn-ghost btn-icon" on:click={closeModal}>
+          <X size={18} />
+        </button>
       </div>
       <div class="modal-body">
         <div class="flex flex-col gap-4">

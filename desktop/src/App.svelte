@@ -14,6 +14,7 @@
   import { toasts, toast } from './stores/toast.js';
   import { openWebSocket } from './lib/api.js';
   import { themeStore } from './stores/theme.js';
+  import { CheckCircle, XCircle, AlertTriangle } from 'lucide-svelte';
 
   import AppShell from './components/AppShell.svelte';
   import Login from './routes/Login.svelte';
@@ -88,7 +89,13 @@
   {#each $toasts as t (t.id)}
     <div class="toast toast-{t.type}">
       <span class="toast-icon">
-        {#if t.type === 'success'}✅{:else if t.type === 'error'}❌{:else}⚠️{/if}
+        {#if t.type === 'success'}
+          <CheckCircle size={18} />
+        {:else if t.type === 'error'}
+          <XCircle size={18} />
+        {:else}
+          <AlertTriangle size={18} />
+        {/if}
       </span>
       <span>{t.message}</span>
     </div>

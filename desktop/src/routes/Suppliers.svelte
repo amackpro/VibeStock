@@ -6,6 +6,7 @@
   import { onMount } from 'svelte';
   import { api }   from '../lib/api.js';
   import { toast } from '../stores/toast.js';
+  import { Pencil, Trash2, X } from 'lucide-svelte';
 
   let suppliers  = [];
   let loading    = false;
@@ -88,8 +89,12 @@
                 <td style="color:var(--text-muted);font-size:0.8125rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{s.address ?? '—'}</td>
                 <td>
                   <div class="flex gap-2">
-                    <button class="btn btn-ghost btn-sm btn-icon" on:click={() => openEdit(s)} title="Edit">✏️</button>
-                    <button class="btn btn-danger btn-sm btn-icon" on:click={() => del(s)} title="Delete">🗑️</button>
+                    <button class="btn btn-ghost btn-sm btn-icon" on:click={() => openEdit(s)} title="Edit">
+                      <Pencil size={14} />
+                    </button>
+                    <button class="btn btn-danger btn-sm btn-icon" on:click={() => del(s)} title="Delete">
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -109,7 +114,9 @@
     <div class="modal">
       <div class="modal-header">
         <h3>{editing ? 'Edit Supplier' : 'Add Supplier'}</h3>
-        <button class="btn btn-ghost btn-icon" on:click={closeModal}>✕</button>
+        <button class="btn btn-ghost btn-icon" on:click={closeModal}>
+          <X size={18} />
+        </button>
       </div>
       <div class="modal-body">
         <div class="flex flex-col gap-4">

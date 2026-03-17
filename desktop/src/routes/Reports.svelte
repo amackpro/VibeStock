@@ -2,16 +2,17 @@
   import { onMount } from 'svelte';
   import { api } from '../lib/api.js';
   import { toast } from '../stores/toast.js';
+  import { Package, AlertTriangle, ArrowLeftRight, DollarSign, Download, FileText } from 'lucide-svelte';
 
   let activeReport = 'inventory';
   let loading = false;
   let reportData = null;
 
   const reportTypes = [
-    { id: 'inventory', label: 'Inventory Summary', icon: '📦', desc: 'Full list of all products with quantities and values' },
-    { id: 'low-stock', label: 'Low Stock Report', icon: '⚠️', desc: 'Products below reorder level' },
-    { id: 'movements', label: 'Stock Movements', icon: '🔄', desc: 'Recent stock in/out transactions' },
-    { id: 'valuation', label: 'Inventory Valuation', icon: '💰', desc: 'Total inventory value by category' },
+    { id: 'inventory', label: 'Inventory Summary', icon: Package, desc: 'Full list of all products with quantities and values' },
+    { id: 'low-stock', label: 'Low Stock Report', icon: AlertTriangle, desc: 'Products below reorder level' },
+    { id: 'movements', label: 'Stock Movements', icon: ArrowLeftRight, desc: 'Recent stock in/out transactions' },
+    { id: 'valuation', label: 'Inventory Valuation', icon: DollarSign, desc: 'Total inventory value by category' },
   ];
 
   async function loadReport(type) {
@@ -95,7 +96,8 @@
     </div>
     {#if reportData}
       <button class="btn btn-primary" on:click={exportCSV}>
-        <span>📥</span> Export CSV
+        <Download size={16} />
+        <span>Export CSV</span>
       </button>
     {/if}
   </div>
@@ -107,7 +109,7 @@
         class:active={activeReport === rt.id}
         on:click={() => loadReport(rt.id)}
       >
-        <span class="tab-icon">{rt.icon}</span>
+        <span class="tab-icon"><svelte:component this={rt.icon} size={18} /></span>
         <span class="tab-label">{rt.label}</span>
       </button>
     {/each}

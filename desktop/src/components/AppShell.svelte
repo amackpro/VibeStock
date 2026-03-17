@@ -7,6 +7,12 @@
   import { authStore } from '../stores/auth.js';
   import { toast } from '../stores/toast.js';
   import { themeStore } from '../stores/theme.js';
+  import { 
+    LayoutDashboard, FileBarChart, Package, Factory, 
+    ArrowLeftRight, Users, Building2, Zap, Menu,
+    Search, Bell, ChevronDown, LogOut, Sun, Moon,
+    ChevronLeft, ChevronRight
+  } from 'lucide-svelte';
 
   export let activePage = 'dashboard';
   const dispatch = createEventDispatcher();
@@ -16,29 +22,20 @@
   let searchQuery = '';
   let showTenantDropdown = false;
 
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'reports', label: 'Reports', icon: FileBarChart },
+    { id: 'products', label: 'Products', icon: Package },
+    { id: 'suppliers', label: 'Suppliers', icon: Factory },
+    { id: 'movements', label: 'Movements', icon: ArrowLeftRight },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'tenants', label: 'Tenants', icon: Building2, requires: 'globalAdmin' },
+  ];
+
   const navGroups = [
-    {
-      title: 'Overview',
-      items: [
-        { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-        { id: 'reports', label: 'Reports', icon: '📈' },
-      ]
-    },
-    {
-      title: 'Inventory',
-      items: [
-        { id: 'products', label: 'Products', icon: '📦' },
-        { id: 'suppliers', label: 'Suppliers', icon: '🏭' },
-        { id: 'movements', label: 'Movements', icon: '🔄' },
-      ]
-    },
-    {
-      title: 'Administration',
-      items: [
-        { id: 'users', label: 'Users', icon: '👥' },
-        { id: 'tenants', label: 'Tenants', icon: '🏢', requires: 'globalAdmin' },
-      ]
-    }
+    { title: 'Overview', items: ['dashboard', 'reports'] },
+    { title: 'Inventory', items: ['products', 'suppliers', 'movements'] },
+    { title: 'Administration', items: ['users', 'tenants'] },
   ];
 
   $: user = $authStore.user;
@@ -47,9 +44,9 @@
   $: isGlobalAdmin = user?.is_global_admin === true;
   
   $: filteredNavGroups = navGroups.map(group => ({
-    ...group,
-    items: group.items.filter(item => {
-      if (item.requires === 'globalAdmin') return isGlobalAdmin;
+    title: group.title,
+    items: group.items.map(id => navItems.find(n => n.id === id)).filter(item => {
+      if (item?.requires === 'globalAdmin') return isGlobalAdmin;
       return true;
     })
   })).filter(group => group.items.length > 0);
@@ -104,7 +101,9 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="logo">
-        <div class="logo-icon">⚡</div>
+        <div class="logo-icon">
+          <Zap size={20} />
+        </div>
         {#if !sidebarCollapsed}
           <div class="logo-text">
             <span class="logo-name">VibeStock</span>
@@ -112,7 +111,11 @@
         {/if}
       </div>
       <button class="collapse-btn" on:click={toggleSidebar}>
-        {sidebarCollapsed ? '→' : '←'}
+        {#if sidebarCollapsed}
+          <ChevronRight size={18} />
+        {:else}
+          <ChevronLeft size={18} />
+        {/if}
       </button>
     </div>
 
@@ -129,7 +132,9 @@
               on:click={() => navigate(item.id)}
               title={sidebarCollapsed ? item.label : ''}
             >
-              <span class="nav-icon">{item.icon}</span>
+              <span class="nav-icon">
+                <svelte:component this={item.icon} size={18} />
+              </span>
               {#if !sidebarCollapsed}
                 <span class="nav-label">{item.label}</span>
               {/if}
@@ -144,7 +149,11 @@
 
     <div class="sidebar-footer">
       <button class="theme-btn" on:click={toggleTheme}>
-        {$themeStore === 'dark' ? '☀️' : '🌙'}
+        {#if $themeStore === 'dark'}
+          <Sun size={18} />
+        {:else}
+          <Moon size={18} />
+        {/if}
       </button>
     </div>
   </aside>
@@ -155,7 +164,7 @@
     <header class="header">
       <div class="header-left">
         <div class="search-bar">
-          <span>🔍</span>
+          <Search size={16} />
           <input
             type="text"
             placeholder="Search products, categories..."
@@ -172,9 +181,11 @@
               class="tenant-btn"
               on:click|stopPropagation={() => showTenantDropdown = !showTenantDropdown}
             >
-              <span>🏢</span>
+              <Building2 size={16} />
               <span>{tenant?.name || 'Select'}</span>
-              <span class="arrow">▼</span>
+              <span class="arrow">
+                <ChevronDown size={14} />
+              </span>
             </button>
             {#if showTenantDropdown}
               <div class="dropdown-menu">
@@ -193,7 +204,7 @@
           </div>
         {:else if tenant}
           <div class="tenant-badge">
-            <span>🏢</span>
+            <Building2 size={14} />
             <span>{tenant.name}</span>
           </div>
         {/if}
@@ -226,7 +237,8 @@
               </div>
               <div class="dropdown-divider"></div>
               <button class="dropdown-item" on:click={logout}>
-                🚪 Logout
+                <LogOut size={16} />
+                <span>Logout</span>
               </button>
             </div>
           {/if}

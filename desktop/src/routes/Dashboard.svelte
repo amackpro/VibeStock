@@ -4,6 +4,10 @@
    */
   import { onMount, onDestroy } from 'svelte';
   import { api } from '../lib/api.js';
+  import { 
+    Package, Tags, Factory, AlertTriangle, XCircle, 
+    DollarSign, RotateCcw, RefreshCw 
+  } from 'lucide-svelte';
 
   let stats = null;
   let loading = true;
@@ -60,7 +64,8 @@
       <p class="page-subtitle">Real-time inventory overview</p>
     </div>
     <button class="btn btn-ghost" on:click={() => { loadStats(); loadMovements(); }}>
-      🔄 Refresh
+      <RefreshCw size={16} />
+      <span>Refresh</span>
     </button>
   </div>
 
@@ -73,37 +78,37 @@
     <!-- KPI Cards -->
     <div class="grid grid-3 grid-gap-4">
       <div class="card stat-card stagger-row">
-        <span class="stat-icon">📦</span>
+        <span class="stat-icon"><Package size={32} /></span>
         <div class="stat-value">{stats.total_products}</div>
         <div class="stat-label">Total Products</div>
       </div>
 
       <div class="card stat-card stagger-row">
-        <span class="stat-icon">🏷️</span>
+        <span class="stat-icon"><Tags size={32} /></span>
         <div class="stat-value">{stats.total_categories}</div>
         <div class="stat-label">Categories</div>
       </div>
 
       <div class="card stat-card stagger-row">
-        <span class="stat-icon">🏭</span>
+        <span class="stat-icon"><Factory size={32} /></span>
         <div class="stat-value">{stats.total_suppliers}</div>
         <div class="stat-label">Suppliers</div>
       </div>
 
       <div class="card stat-card stagger-row">
-        <span class="stat-icon">⚠️</span>
+        <span class="stat-icon"><AlertTriangle size={32} /></span>
         <div class="stat-value" style="color: var(--accent-amber)">{stats.low_stock_count}</div>
         <div class="stat-label">Low Stock Items</div>
       </div>
 
       <div class="card stat-card stagger-row">
-        <span class="stat-icon">🚫</span>
+        <span class="stat-icon"><XCircle size={32} /></span>
         <div class="stat-value" style="color: var(--accent-red)">{stats.out_of_stock_count}</div>
         <div class="stat-label">Out of Stock</div>
       </div>
 
       <div class="card stat-card stagger-row">
-        <span class="stat-icon">💰</span>
+        <span class="stat-icon"><DollarSign size={32} /></span>
         <div class="stat-value" style="font-size: 1.4rem">{currency(stats.total_stock_value)}</div>
         <div class="stat-label">Total Stock Value</div>
       </div>
@@ -111,7 +116,7 @@
 
     <!-- Today's Activity Banner -->
     <div class="card stagger-row" style="display: flex; align-items: center; gap: 16px; padding: 20px 24px; background: rgba(99,102,241,0.08);">
-      <span style="font-size: 2rem">🔄</span>
+      <RotateCcw size={32} style="color: var(--accent-primary)" />
       <div>
         <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-glow)">{stats.total_movements_today}</div>
         <div style="font-size: 0.875rem; color: var(--text-secondary)">Stock movements recorded today</div>
