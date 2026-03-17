@@ -247,9 +247,9 @@
 
   /* Sidebar - Dynamic width */
   .sidebar {
-    width: 18vw;
-    min-width: 180px;
-    max-width: 320px;
+    width: 22vw;
+    min-width: 200px;
+    max-width: 360px;
     height: 100vh;
     position: fixed;
     left: 0;
@@ -265,9 +265,9 @@
   }
 
   .collapsed .sidebar {
-    width: 5vw;
-    min-width: 56px;
-    max-width: 72px;
+    width: 6vw;
+    min-width: 60px;
+    max-width: 80px;
   }
 
   .sidebar-header {
@@ -429,8 +429,8 @@
   /* Main Area */
   .main-area {
     flex: 1;
-    margin-left: 18vw;
-    min-width: 180px;
+    margin-left: 22vw;
+    min-width: 200px;
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -438,8 +438,8 @@
   }
 
   .collapsed .main-area {
-    margin-left: 5vw;
-    min-width: 56px;
+    margin-left: 6vw;
+    min-width: 60px;
   }
 
   /* Header */
