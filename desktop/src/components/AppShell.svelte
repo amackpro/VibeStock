@@ -1,35 +1,25 @@
 <script>
   /**
    * AppShell.svelte - Main application layout
-   * 
-   * Provides:
-   * - Global header with search, notifications, user menu
-   * - Collapsible sidebar with navigation
-   * - Responsive layout
+   * Uses the original glassmorphism theme from app.css
    */
   import { createEventDispatcher, onMount } from 'svelte';
   import { authStore } from '../stores/auth.js';
   import { toast } from '../stores/toast.js';
   import { themeStore } from '../stores/theme.js';
-  import { api } from '../lib/api.js';
 
   export let activePage = 'dashboard';
   const dispatch = createEventDispatcher();
 
-  // State
   let sidebarCollapsed = false;
   let showUserMenu = false;
-  let showNotifications = false;
   let searchQuery = '';
   let showTenantDropdown = false;
 
-  // Navigation groups
   const navGroups = [
     {
       title: 'Overview',
-      items: [
-        { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-      ]
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: '📊' }]
     },
     {
       title: 'Inventory',
@@ -48,7 +38,6 @@
     }
   ];
 
-  // Derived state
   $: user = $authStore.user;
   $: tenant = $authStore.tenant;
   $: accessibleTenants = $authStore.accessibleTenants || [];
@@ -62,7 +51,6 @@
     })
   })).filter(group => group.items.length > 0);
 
-  // Functions
   function navigate(page) {
     dispatch('navigate', page);
   }
@@ -93,13 +81,6 @@
     }
   }
 
-  function handleSearch(e) {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      dispatch('search', searchQuery);
-    }
-  }
-
-  // Close dropdowns when clicking outside
   function handleClickOutside(e) {
     if (!e.target.closest('.user-menu-container')) {
       showUserMenu = false;
@@ -115,28 +96,25 @@
   });
 </script>
 
-<div class="app-shell" class:sidebar-collapsed={sidebarCollapsed}>
-  <!-- ── Sidebar ── -->
+<div class="app-shell" class:collapsed={sidebarCollapsed}>
+  <!-- Sidebar -->
   <aside class="sidebar">
-    <!-- Logo -->
     <div class="sidebar-header">
       <div class="logo">
         <div class="logo-icon">⚡</div>
         {#if !sidebarCollapsed}
           <div class="logo-text">
             <span class="logo-name">VibeStock</span>
-            <span class="logo-tagline">Inventory Pro</span>
           </div>
         {/if}
       </div>
-      <button class="collapse-btn" on:click={toggleSidebar} title={sidebarCollapsed ? 'Expand' : 'Collapse'}>
+      <button class="collapse-btn" on:click={toggleSidebar}>
         {sidebarCollapsed ? '→' : '←'}
       </button>
     </div>
 
-    <!-- Navigation -->
     <nav class="sidebar-nav">
-      {#each filteredNavGroups as group, gi}
+      {#each filteredNavGroups as group}
         {#if !sidebarCollapsed}
           <div class="nav-group-title">{group.title}</div>
         {/if}
@@ -161,29 +139,25 @@
       {/each}
     </nav>
 
-    <!-- Sidebar Footer -->
     <div class="sidebar-footer">
-      <button class="theme-btn" on:click={toggleTheme} title="Toggle Theme">
+      <button class="theme-btn" on:click={toggleTheme}>
         {$themeStore === 'dark' ? '☀️' : '🌙'}
       </button>
     </div>
   </aside>
 
-  <!-- ── Main Area ── -->
+  <!-- Main Area -->
   <div class="main-area">
     <!-- Header -->
     <header class="header">
       <div class="header-left">
-        <div class="search-box">
-          <span class="search-icon">🔍</span>
+        <div class="search-bar">
+          <span>🔍</span>
           <input
             type="text"
-            class="search-input"
             placeholder="Search products, categories..."
             bind:value={searchQuery}
-            on:keydown={handleSearch}
           />
-          <kbd class="search-kbd">⌘K</kbd>
         </div>
       </div>
 
@@ -196,8 +170,8 @@
               on:click|stopPropagation={() => showTenantDropdown = !showTenantDropdown}
             >
               <span>🏢</span>
-              <span class="tenant-name">{tenant?.name || 'Select Tenant'}</span>
-              <span class="dropdown-arrow">▼</span>
+              <span>{tenant?.name || 'Select'}</span>
+              <span class="arrow">▼</span>
             </button>
             {#if showTenantDropdown}
               <div class="dropdown-menu">
@@ -208,7 +182,7 @@
                     on:click={() => switchTenant(t.id)}
                   >
                     {t.name}
-                    {#if t.id === tenant?.id}✓{/if}
+                    {#if t.id === tenant?.id} ✓{/if}
                   </button>
                 {/each}
               </div>
@@ -221,34 +195,30 @@
           </div>
         {/if}
 
-        <!-- Notifications -->
-        <button class="icon-btn" title="Notifications">
-          🔔
-        </button>
-
         <!-- User Menu -->
         <div class="user-menu-container">
           <button 
             class="user-btn"
             on:click|stopPropagation={() => showUserMenu = !showUserMenu}
           >
-            <div class="avatar avatar-sm">
+            <div class="avatar-sm">
               {user?.full_name?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div class="user-info">
               <span class="user-name">{user?.full_name || 'User'}</span>
               <span class="user-role">{user?.role || 'staff'}</span>
             </div>
-            <span class="dropdown-arrow">▼</span>
           </button>
           
           {#if showUserMenu}
             <div class="dropdown-menu user-dropdown">
               <div class="dropdown-header">
-                <div class="avatar">{user?.full_name?.charAt(0).toUpperCase() || 'U'}</div>
+                <div class="avatar-sm">
+                  {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+                </div>
                 <div>
                   <div class="dropdown-user-name">{user?.full_name}</div>
-                  <div class="dropdown-user-email">{user?.username}</div>
+                  <div class="dropdown-user-email">@{user?.username}</div>
                 </div>
               </div>
               <div class="dropdown-divider"></div>
@@ -261,7 +231,7 @@
       </div>
     </header>
 
-    <!-- Page Content -->
+    <!-- Content -->
     <main class="content">
       <slot></slot>
     </main>
@@ -269,45 +239,45 @@
 </div>
 
 <style>
-  /* ── App Shell Layout ── */
   .app-shell {
     display: flex;
-    min-height: 100vh;
-    background-color: var(--bg-base);
+    height: 100vh;
+    overflow: hidden;
   }
 
-  /* ── Sidebar ── */
+  /* Sidebar */
   .sidebar {
-    width: var(--sidebar-width);
+    width: 260px;
     height: 100vh;
     position: fixed;
     left: 0;
     top: 0;
-    background-color: var(--bg-surface);
-    border-right: 1px solid var(--border-color);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-right: 1px solid var(--border-glass);
     display: flex;
     flex-direction: column;
-    transition: width var(--transition-base);
-    z-index: var(--z-fixed);
+    transition: width 0.3s ease;
+    z-index: 100;
   }
 
-  .sidebar-collapsed .sidebar {
-    width: var(--sidebar-collapsed-width);
+  .collapsed .sidebar {
+    width: 72px;
   }
 
   .sidebar-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-4);
-    border-bottom: 1px solid var(--border-color);
-    min-height: 64px;
+    padding: 20px 16px;
+    border-bottom: 1px solid var(--border-surface);
   }
 
   .logo {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: 12px;
   }
 
   .logo-icon {
@@ -316,30 +286,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
+    border-radius: 10px;
     font-size: 1.2rem;
     flex-shrink: 0;
   }
 
-  .logo-text {
-    display: flex;
-    flex-direction: column;
-    white-space: nowrap;
-  }
-
   .logo-name {
-    font-weight: var(--font-bold);
-    font-size: var(--text-base);
-    color: var(--text-primary);
-    line-height: 1.2;
-  }
-
-  .logo-tagline {
-    font-size: var(--text-xs);
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-weight: 800;
+    font-size: 1.1rem;
+    white-space: nowrap;
   }
 
   .collapse-btn {
@@ -349,38 +305,38 @@
     align-items: center;
     justify-content: center;
     background: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--border-glass);
+    border-radius: 8px;
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: var(--text-xs);
-    transition: all var(--transition-fast);
+    font-size: 0.75rem;
+    transition: all 0.15s ease;
   }
 
   .collapse-btn:hover {
-    background: var(--color-gray-100);
+    background: var(--glass-hover);
     color: var(--text-primary);
   }
 
-  .sidebar-collapsed .collapse-btn {
+  .collapsed .collapse-btn {
     display: none;
   }
 
-  /* ── Navigation ── */
+  /* Navigation */
   .sidebar-nav {
     flex: 1;
     overflow-y: auto;
-    padding: var(--space-4);
+    padding: 16px;
   }
 
   .nav-group-title {
-    font-size: var(--text-xs);
-    font-weight: var(--font-semibold);
-    color: var(--text-tertiary);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: var(--space-2) var(--space-3);
-    margin-top: var(--space-4);
+    padding: 12px 12px 8px;
+    margin-top: 8px;
   }
 
   .nav-group-title:first-child {
@@ -390,29 +346,29 @@
   .nav-item {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: 12px;
     width: 100%;
-    padding: var(--space-2) var(--space-3);
+    padding: 10px 12px;
     background: transparent;
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 10px;
     color: var(--text-secondary);
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
+    font-size: 0.9rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 0.15s ease;
     position: relative;
     text-align: left;
   }
 
   .nav-item:hover {
-    background: var(--color-gray-100);
+    background: var(--glass-hover);
     color: var(--text-primary);
   }
 
   .nav-item.active {
-    background: rgba(99, 102, 241, 0.1);
-    color: var(--color-primary);
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent-glow);
   }
 
   .nav-icon {
@@ -428,156 +384,107 @@
 
   .nav-indicator {
     width: 4px;
-    height: 20px;
-    background: var(--color-primary);
-    border-radius: var(--radius-full);
+    height: 18px;
+    background: var(--accent-primary);
+    border-radius: 4px;
     position: absolute;
-    right: 8px;
+    right: 10px;
   }
 
-  .sidebar-collapsed .nav-item {
+  .collapsed .nav-item {
     justify-content: center;
-    padding: var(--space-3);
+    padding: 12px;
   }
 
-  .sidebar-collapsed .nav-label,
-  .sidebar-collapsed .nav-indicator {
+  .collapsed .nav-label,
+  .collapsed .nav-indicator {
     display: none;
   }
 
-  /* ── Sidebar Footer ── */
+  /* Sidebar Footer */
   .sidebar-footer {
-    padding: var(--space-4);
-    border-top: 1px solid var(--border-color);
+    padding: 16px;
+    border-top: 1px solid var(--border-surface);
   }
 
   .theme-btn {
     width: 100%;
-    padding: var(--space-2);
+    padding: 10px;
     background: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--border-glass);
+    border-radius: 10px;
     cursor: pointer;
     font-size: 1.1rem;
-    transition: all var(--transition-fast);
+    transition: all 0.15s ease;
   }
 
   .theme-btn:hover {
-    background: var(--color-gray-100);
+    background: var(--glass-hover);
   }
 
-  /* ── Main Area ── */
+  /* Main Area */
   .main-area {
     flex: 1;
-    margin-left: var(--sidebar-width);
+    margin-left: 260px;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    transition: margin-left var(--transition-base);
+    height: 100vh;
+    transition: margin-left 0.3s ease;
   }
 
-  .sidebar-collapsed .main-area {
-    margin-left: var(--sidebar-collapsed-width);
+  .collapsed .main-area {
+    margin-left: 72px;
   }
 
-  /* ── Header ── */
+  /* Header */
   .header {
-    height: var(--header-height);
+    height: 64px;
     position: sticky;
     top: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 var(--space-6);
-    background: var(--bg-surface);
-    border-bottom: 1px solid var(--border-color);
-    z-index: var(--z-sticky);
+    padding: 0 24px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-bottom: 1px solid var(--border-glass);
+    z-index: 50;
   }
 
   .header-left {
     flex: 1;
-    max-width: 480px;
-  }
-
-  .search-box {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    background: var(--color-gray-100);
-    border-radius: var(--radius-lg);
-    border: 1px solid transparent;
-    transition: all var(--transition-fast);
-  }
-
-  .search-box:focus-within {
-    background: var(--bg-surface);
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--ring-color);
-  }
-
-  .search-icon {
-    font-size: var(--text-sm);
-    opacity: 0.5;
-  }
-
-  .search-input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    font-size: var(--text-sm);
-    color: var(--text-primary);
-    outline: none;
-  }
-
-  .search-input::placeholder {
-    color: var(--text-tertiary);
-  }
-
-  .search-kbd {
-    padding: 2px 6px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    font-size: var(--text-xs);
-    color: var(--text-tertiary);
+    max-width: 400px;
   }
 
   .header-right {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: 12px;
   }
 
-  /* ── Tenant ── */
+  /* Tenant */
   .tenant-btn,
   .tenant-badge {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    background: var(--color-gray-100);
-    border-radius: var(--radius-md);
-    font-size: var(--text-sm);
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--glass-hover);
+    border: 1px solid var(--border-surface);
+    border-radius: 10px;
+    font-size: 0.85rem;
     color: var(--text-secondary);
     cursor: pointer;
-    border: none;
-    transition: all var(--transition-fast);
+    transition: all 0.15s ease;
   }
 
   .tenant-btn:hover,
   .tenant-badge:hover {
-    background: var(--color-gray-200);
+    background: var(--border-glass);
   }
 
-  .tenant-name {
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .dropdown-arrow {
+  .arrow {
     font-size: 0.6rem;
     opacity: 0.6;
   }
@@ -586,40 +493,53 @@
     position: relative;
   }
 
-  /* ── User Button ── */
+  /* User Button */
   .user-btn {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-1) var(--space-2);
+    gap: 10px;
+    padding: 6px 10px;
     background: transparent;
     border: 1px solid transparent;
-    border-radius: var(--radius-md);
+    border-radius: 10px;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 0.15s ease;
   }
 
   .user-btn:hover {
-    background: var(--color-gray-100);
+    background: var(--glass-hover);
+  }
+
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
   }
 
   .user-info {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    text-align: left;
   }
 
   .user-name {
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
+    font-size: 0.85rem;
+    font-weight: 600;
     color: var(--text-primary);
     line-height: 1.2;
   }
 
   .user-role {
-    font-size: var(--text-xs);
-    color: var(--text-tertiary);
+    font-size: 0.7rem;
+    color: var(--text-muted);
     text-transform: capitalize;
   }
 
@@ -627,73 +547,76 @@
     position: relative;
   }
 
-  /* ── Dropdown ── */
+  /* Dropdown */
   .dropdown-menu {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
     min-width: 200px;
     background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    z-index: var(--z-dropdown);
-    animation: slideInUp var(--transition-fast) ease-out;
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    z-index: 200;
     overflow: hidden;
+    animation: scaleIn 0.15s ease;
   }
 
   .dropdown-header {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-3);
-    border-bottom: 1px solid var(--border-color);
+    gap: 12px;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-surface);
   }
 
   .dropdown-user-name {
-    font-weight: var(--font-medium);
-    font-size: var(--text-sm);
+    font-weight: 600;
+    font-size: 0.9rem;
   }
 
   .dropdown-user-email {
-    font-size: var(--text-xs);
-    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .dropdown-divider {
+    height: 1px;
+    background: var(--border-surface);
   }
 
   .dropdown-item {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: 8px;
     width: 100%;
-    padding: var(--space-2) var(--space-3);
+    padding: 10px 12px;
     background: transparent;
     border: none;
-    font-size: var(--text-sm);
+    font-size: 0.85rem;
     color: var(--text-primary);
     cursor: pointer;
-    transition: background var(--transition-fast);
+    transition: background 0.15s ease;
     text-align: left;
   }
 
   .dropdown-item:hover {
-    background: var(--color-gray-100);
+    background: var(--glass-hover);
   }
 
   .dropdown-item.active {
     background: rgba(99, 102, 241, 0.1);
-    color: var(--color-primary);
+    color: var(--accent-glow);
   }
 
-  .dropdown-divider {
-    height: 1px;
-    background: var(--border-color);
-    margin: var(--space-1) 0;
-  }
-
-  /* ── Content ── */
+  /* Content */
   .content {
     flex: 1;
-    padding: var(--space-6);
     overflow-y: auto;
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
   }
 </style>

@@ -24,7 +24,7 @@
   import Users from './routes/Users.svelte';
   import Tenants from './routes/Tenants.svelte';
 
-  import './styles/design-system.css';
+  import './app.css';
 
   // Routing
   let page = 'dashboard';
