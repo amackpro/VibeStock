@@ -241,6 +241,7 @@
 <style>
   .app-shell {
     display: flex;
+    width: 100%;
     height: 100vh;
     overflow: hidden;
   }
@@ -248,12 +249,9 @@
   /* Sidebar - Dynamic width */
   .sidebar {
     width: 22vw;
-    min-width: 200px;
+    min-width: 240px;
     max-width: 360px;
     height: 100vh;
-    position: fixed;
-    left: 0;
-    top: 0;
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -262,12 +260,12 @@
     flex-direction: column;
     transition: width 0.3s ease;
     z-index: 100;
+    flex-shrink: 0;
   }
 
   .collapsed .sidebar {
-    width: 6vw;
-    min-width: 60px;
-    max-width: 80px;
+    width: 80px;
+    min-width: 80px;
   }
 
   .sidebar-header {
@@ -429,17 +427,14 @@
   /* Main Area */
   .main-area {
     flex: 1;
-    margin-left: 22vw;
-    min-width: 200px;
+    min-width: 0; /* Important for flex children with overflow */
     display: flex;
     flex-direction: column;
     height: 100vh;
-    transition: margin-left 0.3s ease;
   }
 
   .collapsed .main-area {
-    margin-left: 6vw;
-    min-width: 60px;
+    /* No margin-left needed with flexbox sibling layout */
   }
 
   /* Header */
