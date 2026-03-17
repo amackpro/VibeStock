@@ -103,6 +103,14 @@ export const api = {
     update: (id, data)  => request('PUT',  `/api/tenants/${id}`, data),
     delete: (id)        => request('DELETE', `/api/tenants/${id}`),
   },
+
+  // ── Reports ────────────────────────────────────────────────────────────────────
+  reports: {
+    inventory: (params = {}) => request('GET', `/api/reports/inventory?${new URLSearchParams(params)}`),
+    lowStock:  (params = {}) => request('GET', `/api/reports/low-stock?${new URLSearchParams(params)}`),
+    movements: (params = {}) => request('GET', `/api/reports/movements?${new URLSearchParams(params)}`),
+    valuation: (params = {}) => request('GET', `/api/reports/valuation?${new URLSearchParams(params)}`),
+  },
 };
 
 // ── WebSocket helper ──────────────────────────────────────────────────────────

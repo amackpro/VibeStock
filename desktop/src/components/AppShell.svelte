@@ -19,7 +19,10 @@
   const navGroups = [
     {
       title: 'Overview',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: '📊' }]
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+        { id: 'reports', label: 'Reports', icon: '📈' },
+      ]
     },
     {
       title: 'Inventory',

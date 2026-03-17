@@ -29,6 +29,7 @@ use api::{
         tenants::{create_tenant, delete_tenant, get_tenant, list_tenants, update_tenant},
         websocket::ws_handler,
         users::{list_users, update_user_role, toggle_user_status},
+        reports::{get_inventory_report, get_low_stock_report, get_movements_report, get_valuation_report},
     },
     AppState, InnerState,
 };
@@ -85,6 +86,11 @@ async fn main() -> anyhow::Result<()> {
         // Tenants (global admin only)
         .route("/tenants",           get(list_tenants).post(create_tenant))
         .route("/tenants/:id",       get(get_tenant).put(update_tenant).delete(delete_tenant))
+        // Reports
+        .route("/reports/inventory",    get(get_inventory_report))
+        .route("/reports/low-stock",     get(get_low_stock_report))
+        .route("/reports/movements",     get(get_movements_report))
+        .route("/reports/valuation",     get(get_valuation_report))
         // Apply auth middleware
         .layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
 

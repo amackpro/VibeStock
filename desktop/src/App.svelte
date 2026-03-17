@@ -23,6 +23,7 @@
   import Movements from './routes/Movements.svelte';
   import Users from './routes/Users.svelte';
   import Tenants from './routes/Tenants.svelte';
+  import Reports from './routes/Reports.svelte';
 
   import './app.css';
 
@@ -76,6 +77,8 @@
       <Users />
     {:else if page === 'tenants'}
       <Tenants />
+    {:else if page === 'reports'}
+      <Reports />
     {/if}
   </AppShell>
 {/if}

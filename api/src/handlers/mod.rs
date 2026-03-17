@@ -7,3 +7,4 @@ pub mod dashboard;
 pub mod websocket;
 pub mod users;
 pub mod tenants;
+pub mod reports;
