@@ -8,7 +8,7 @@
   import { onMount } from 'svelte';
   import { api }   from '../lib/api.js';
   import { toast } from '../stores/toast.js';
-  import { X, Package, Truck, Wrench, Undo2 } from 'lucide-svelte';
+  import { X, Package, Truck, Wrench, Undo2, ArrowUp, ArrowDown, Settings } from 'lucide-svelte';
 
   let movements  = [];
   let products   = [];
@@ -20,48 +20,14 @@
   // New movement form
   let form = { product_id: '', movement_type: 'in', quantity: 1, reference: '', notes: '' };
 
-  // ── Data loading ─────────────────────────────────────────────────────────────
-  async function load() {
-    loading = true;
-    try {
-      const r = await api.movements.list({ page, per_page: 15 });
-      movements = r.data ?? [];
-      total     = r.total ?? 0;
-    } catch (e) { toast.error(e.message); }
-    finally { loading = false; }
-  }
-
-  async function loadProducts() {
-    try { const r = await api.products.list({ per_page: 100 }); products = r.data ?? []; }
-    catch {}
-  }
-
-  onMount(() => { load(); loadProducts(); });
-
-  // ── Modal ────────────────────────────────────────────────────────────────────
-  function openModal()  { form = { product_id: '', movement_type: 'in', quantity: 1, reference: '', notes: '' }; showModal = true; }
-  function closeModal() { showModal = false; }
-
-  async function saveMovement() {
-    if (!form.product_id) { toast.warning('Please select a product'); return; }
-    try {
-      const r = await api.movements.create({
-        product_id:    form.product_id,
-        movement_type: form.movement_type,
-        quantity:      parseInt(form.quantity),
-        reference:     form.reference || null,
-        notes:         form.notes || null,
-      });
-      toast.success(`✅ Stock updated. New quantity: ${r.new_quantity}`);
-      closeModal();
-      load();
-      window.dispatchEvent(new CustomEvent('stock-updated'));  // triggers dashboard refresh
-    } catch (e) { toast.error(e.message); }
-  }
-
   // ── Helpers ──────────────────────────────────────────────────────────────────
   const movBadgeClass = { in: 'badge-green', out: 'badge-red', adjustment: 'badge-amber', return: 'badge-cyan' };
-  const movEmoji      = { in: '⬆️', out: '⬇️', adjustment: '⚙️', return: '↩️' };
+  const movIcons = { 
+    in: ArrowUp, 
+    out: ArrowDown, 
+    adjustment: Settings, 
+    return: Undo2 
+  };
 
   function fmtDate(dt) {
     return new Date(dt).toLocaleString('en-IN', {
@@ -85,7 +51,10 @@
   <!-- ── Legend ────────────────────────────────────────────────────────────── -->
   <div class="flex gap-3">
     {#each ['in','out','adjustment','return'] as t}
-      <span class="badge {movBadgeClass[t]}">{movEmoji[t]} {t}</span>
+      <span class="badge {movBadgeClass[t]}">
+        <svelte:component this={movIcons[t]} size={12} />
+        {t}
+      </span>
     {/each}
   </div>
 
@@ -115,7 +84,12 @@
                   <div style="font-weight:600">{m.product_name}</div>
                   <div style="font-size:0.75rem;font-family:var(--font-mono);color:var(--text-muted)">{m.product_sku}</div>
                 </td>
-                <td><span class="badge {movBadgeClass[m.movement_type]}">{movEmoji[m.movement_type]} {m.movement_type}</span></td>
+                <td>
+                  <span class="badge {movBadgeClass[m.movement_type]}">
+                    <svelte:component this={movIcons[m.movement_type]} size={12} />
+                    {m.movement_type}
+                  </span>
+                </td>
                 <td style="font-family:var(--font-mono);font-weight:700;font-size:1rem">{m.quantity}</td>
                 <td style="color:var(--text-secondary);font-size:0.8125rem">{m.reference ?? '—'}</td>
                 <td style="color:var(--text-muted);font-size:0.8125rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{m.notes ?? '—'}</td>
@@ -166,10 +140,10 @@
             <div class="form-group">
               <label class="label" for="mv-type">Movement Type *</label>
               <select id="mv-type" class="select input" bind:value={form.movement_type}>
-                <option value="in">⬆️ Stock In (received)</option>
-                <option value="out">⬇️ Stock Out (dispatched)</option>
-                <option value="adjustment">⚙️ Adjustment (audit/damage)</option>
-                <option value="return">↩️ Return (customer/supplier)</option>
+                <option value="in">Stock In (received)</option>
+                <option value="out">Stock Out (dispatched)</option>
+                <option value="adjustment">Adjustment (audit/damage)</option>
+                <option value="return">Return (customer/supplier)</option>
               </select>
             </div>
             <div class="form-group">
