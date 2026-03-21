@@ -11,7 +11,10 @@
   import { onMount } from 'svelte';
   import { api }   from '../lib/api.js';
   import { toast } from '../stores/toast.js';
-  import { Pencil, Trash2, X, Search } from 'lucide-svelte';
+  import { Pencil, Trash2, X, Search, XCircle } from 'lucide-svelte';
+
+  // ── Props ────────────────────────────────────────────────────────────────────
+  export let initialSupplierId = null;
 
   // ── State ────────────────────────────────────────────────────────────────────
   let products       = [];
@@ -24,6 +27,8 @@
   let loading        = false;
   let showModal      = false;
   let editing        = null;   // null = new product
+  let supplierFilter = initialSupplierId;
+  let filteredSupplierName = '';
 
   // Form fields
   let form = emptyForm();
@@ -42,7 +47,11 @@
   async function loadProducts() {
     loading = true;
     try {
-      const r = await api.products.list({ page, per_page: perPage, search });
+      const params = { page, per_page: perPage, search };
+      if (supplierFilter) {
+        params.supplier_id = supplierFilter;
+      }
+      const r = await api.products.list(params);
       products = r.data ?? [];
       total    = r.total ?? 0;
     } catch (e) {
@@ -54,9 +63,24 @@
     const [cats, sups] = await Promise.all([api.categories.list(), api.suppliers.list()]);
     categories = cats;
     suppliers  = sups;
+
+    // If filtering by supplier, find the supplier name
+    if (supplierFilter && sups.length > 0) {
+      const supplier = sups.find(s => s.id === supplierFilter);
+      if (supplier) {
+        filteredSupplierName = supplier.name;
+      }
+    }
   }
 
   onMount(() => { loadProducts(); loadMeta(); });
+
+  function clearSupplierFilter() {
+    supplierFilter = null;
+    filteredSupplierName = '';
+    page = 1;
+    loadProducts();
+  }
 
   // ── Search debounce ──────────────────────────────────────────────────────────
   let searchTimer;
@@ -137,7 +161,17 @@
   <div class="page-header">
     <div class="page-title-group">
       <h1 class="page-title">Products</h1>
-      <p class="page-subtitle">{total} total products</p>
+      <div class="flex gap-2 items-center">
+        <p class="page-subtitle">{total} total products</p>
+        {#if supplierFilter && filteredSupplierName}
+          <span class="filter-badge">
+            Supplier: {filteredSupplierName}
+            <button class="clear-filter-btn" on:click={clearSupplierFilter} title="Clear filter">
+              <XCircle size={14} />
+            </button>
+          </span>
+        {/if}
+      </div>
     </div>
     <div class="flex gap-4">
       <!-- Search -->
@@ -306,5 +340,33 @@
     padding: 3px 8px; border-radius: 6px;
     color: var(--accent-glow);
     border: 1px solid rgba(139, 92, 246, 0.3);
+  }
+
+  .filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background: rgba(102, 126, 234, 0.15);
+    color: #667eea;
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .clear-filter-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    color: #667eea;
+    transition: color 0.2s;
+  }
+
+  .clear-filter-btn:hover {
+    color: #5568d3;
   }
 </style>

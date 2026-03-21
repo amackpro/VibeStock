@@ -130,6 +130,7 @@ pub struct CreateSupplierRequest {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub address: Option<String>,
+    pub city_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -139,6 +140,7 @@ pub struct UpdateSupplierRequest {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub address: Option<String>,
+    pub city_id: Option<Uuid>,
 }
 
 // ─── Stock Movement DTOs ──────────────────────────────────────────────────────
@@ -160,6 +162,7 @@ pub struct PaginationParams {
     pub page: Option<i64>,
     pub per_page: Option<i64>,
     pub search: Option<String>,
+    pub supplier_id: Option<Uuid>,
 }
 
 impl PaginationParams {

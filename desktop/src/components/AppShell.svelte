@@ -7,11 +7,11 @@
   import { authStore } from '../stores/auth.js';
   import { toast } from '../stores/toast.js';
   import { themeStore } from '../stores/theme.js';
-  import { 
-    LayoutDashboard, FileBarChart, Package, Factory, 
+  import {
+    LayoutDashboard, FileBarChart, Package, Factory,
     ArrowLeftRight, Users, Building2, Zap, Menu,
     Search, Bell, ChevronDown, LogOut, Sun, Moon,
-    ChevronLeft, ChevronRight
+    ChevronLeft, ChevronRight, Globe
   } from 'lucide-svelte';
 
   export let activePage = 'dashboard';
@@ -23,6 +23,7 @@
   let showTenantDropdown = false;
 
   const navItems = [
+    { id: 'globe', label: 'Globe View', icon: Globe },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'reports', label: 'Reports', icon: FileBarChart },
     { id: 'products', label: 'Products', icon: Package },
@@ -33,7 +34,7 @@
   ];
 
   const navGroups = [
-    { title: 'Overview', items: ['dashboard', 'reports'] },
+    { title: 'Overview', items: ['globe', 'dashboard', 'reports'] },
     { title: 'Inventory', items: ['products', 'suppliers', 'movements'] },
     { title: 'Administration', items: ['users', 'tenants'] },
   ];

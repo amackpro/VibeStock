@@ -18,36 +18,74 @@ pub async fn list_products(
     let offset  = params.offset();
     let page    = params.page.unwrap_or(1);
 
-    let total: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM products p WHERE p.tenant_id = $1 AND p.is_active = true \
-         AND (p.name ILIKE $2 OR p.sku ILIKE $2)"
-    )
-    .bind(tenant_id)
-    .bind(&search)
-    .fetch_one(&state.db)
-    .await?;
+    // Build WHERE clause with optional supplier filter
+    let where_clause = if params.supplier_id.is_some() {
+        "WHERE p.tenant_id = $1 AND p.is_active = true AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND p.supplier_id = $3"
+    } else {
+        "WHERE p.tenant_id = $1 AND p.is_active = true AND (p.name ILIKE $2 OR p.sku ILIKE $2)"
+    };
 
-    let products = sqlx::query_as::<_, ProductWithDetails>(
-        "SELECT p.id, p.tenant_id, p.name, p.description, p.sku, p.barcode,
-                p.category_id, c.name AS category_name,
-                p.supplier_id, s.name AS supplier_name,
-                p.unit_price, p.cost_price,
-                p.quantity_in_stock, p.reorder_level,
-                p.unit_of_measure, p.is_active, p.image_url,
-                p.created_at, p.updated_at
-         FROM products p
-         LEFT JOIN categories c ON c.id = p.category_id
-         LEFT JOIN suppliers  s ON s.id = p.supplier_id
-         WHERE p.tenant_id = $1 AND p.is_active = true AND (p.name ILIKE $2 OR p.sku ILIKE $2)
-         ORDER BY p.name ASC
-         LIMIT $3 OFFSET $4"
-    )
-    .bind(tenant_id)
-    .bind(&search)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&state.db)
-    .await?;
+    let total: i64 = if let Some(supplier_id) = params.supplier_id {
+        sqlx::query_scalar(&format!("SELECT COUNT(*) FROM products p {}", where_clause))
+            .bind(tenant_id)
+            .bind(&search)
+            .bind(supplier_id)
+            .fetch_one(&state.db)
+            .await?
+    } else {
+        sqlx::query_scalar(&format!("SELECT COUNT(*) FROM products p {}", where_clause))
+            .bind(tenant_id)
+            .bind(&search)
+            .fetch_one(&state.db)
+            .await?
+    };
+
+    let products = if let Some(supplier_id) = params.supplier_id {
+        sqlx::query_as::<_, ProductWithDetails>(&format!(
+            "SELECT p.id, p.tenant_id, p.name, p.description, p.sku, p.barcode,
+                    p.category_id, c.name AS category_name,
+                    p.supplier_id, s.name AS supplier_name,
+                    p.unit_price, p.cost_price,
+                    p.quantity_in_stock, p.reorder_level,
+                    p.unit_of_measure, p.is_active, p.image_url,
+                    p.created_at, p.updated_at
+             FROM products p
+             LEFT JOIN categories c ON c.id = p.category_id
+             LEFT JOIN suppliers  s ON s.id = p.supplier_id
+             {}
+             ORDER BY p.name ASC
+             LIMIT $4 OFFSET $5", where_clause
+        ))
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(supplier_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await?
+    } else {
+        sqlx::query_as::<_, ProductWithDetails>(&format!(
+            "SELECT p.id, p.tenant_id, p.name, p.description, p.sku, p.barcode,
+                    p.category_id, c.name AS category_name,
+                    p.supplier_id, s.name AS supplier_name,
+                    p.unit_price, p.cost_price,
+                    p.quantity_in_stock, p.reorder_level,
+                    p.unit_of_measure, p.is_active, p.image_url,
+                    p.created_at, p.updated_at
+             FROM products p
+             LEFT JOIN categories c ON c.id = p.category_id
+             LEFT JOIN suppliers  s ON s.id = p.supplier_id
+             {}
+             ORDER BY p.name ASC
+             LIMIT $3 OFFSET $4", where_clause
+        ))
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await?
+    };
 
     Ok(Json(PaginatedResponse::new(products, total, page, limit)))
 }

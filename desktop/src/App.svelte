@@ -18,6 +18,7 @@
 
   import AppShell from './components/AppShell.svelte';
   import Login from './routes/Login.svelte';
+  import Globe from './routes/Globe.svelte';
   import Dashboard from './routes/Dashboard.svelte';
   import Products from './routes/Products.svelte';
   import Suppliers from './routes/Suppliers.svelte';
@@ -29,9 +30,20 @@
   import './app.css';
 
   // Routing
-  let page = 'dashboard';
+  let page = 'globe';
+  let selectedSupplierId = null;
+
   function navigate(e) {
-    page = e.detail;
+    const detail = e.detail;
+    if (typeof detail === 'string') {
+      // Simple navigation (just page name)
+      page = detail;
+      selectedSupplierId = null;
+    } else if (detail && detail.page) {
+      // Complex navigation (page + data)
+      page = detail.page;
+      selectedSupplierId = detail.supplierId || null;
+    }
   }
 
   // Auth
@@ -66,10 +78,12 @@
   <Login />
 {:else}
   <AppShell activePage={page} on:navigate={navigate}>
-    {#if page === 'dashboard'}
+    {#if page === 'globe'}
+      <Globe on:navigate={navigate} />
+    {:else if page === 'dashboard'}
       <Dashboard />
     {:else if page === 'products'}
-      <Products />
+      <Products initialSupplierId={selectedSupplierId} />
     {:else if page === 'suppliers'}
       <Suppliers />
     {:else if page === 'movements'}

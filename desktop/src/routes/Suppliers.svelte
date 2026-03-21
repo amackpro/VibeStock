@@ -13,9 +13,11 @@
   let showModal  = false;
   let editing    = null;
   let form       = emptyForm();
+  let cities     = [];
+  let loadingCities = false;
 
   function emptyForm() {
-    return { name: '', contact_name: '', email: '', phone: '', address: '' };
+    return { name: '', contact_name: '', email: '', phone: '', address: '', city_id: '' };
   }
 
   async function load() {
@@ -25,12 +27,52 @@
     finally { loading = false; }
   }
 
-  onMount(load);
+  async function loadCities() {
+    loadingCities = true;
+    try {
+      // Load all regions and their countries/cities
+      const regions = await api.geography.regions();
+      const allCities = [];
+
+      for (const region of regions) {
+        const countries = await api.geography.countriesByRegion(region.id);
+        for (const country of countries) {
+          const countryCities = await api.geography.citiesByCountry(country.id);
+          countryCities.forEach(city => {
+            allCities.push({
+              ...city,
+              country_name: country.name,
+              display_name: `${city.name}, ${country.name}`
+            });
+          });
+        }
+      }
+
+      // Sort by population (largest first)
+      cities = allCities.sort((a, b) => b.population - a.population);
+    } catch (e) {
+      toast.error('Failed to load cities');
+    } finally {
+      loadingCities = false;
+    }
+  }
+
+  onMount(() => {
+    load();
+    loadCities();
+  });
 
   function openAdd()  { editing = null; form = emptyForm(); showModal = true; }
   function openEdit(s) {
     editing = s;
-    form = { name: s.name, contact_name: s.contact_name ?? '', email: s.email ?? '', phone: s.phone ?? '', address: s.address ?? '' };
+    form = {
+      name: s.name,
+      contact_name: s.contact_name ?? '',
+      email: s.email ?? '',
+      phone: s.phone ?? '',
+      address: s.address ?? '',
+      city_id: s.city_id ?? ''
+    };
     showModal = true;
   }
   function closeModal() { showModal = false; }
@@ -47,6 +89,12 @@
     if (!confirm(`Delete supplier "${s.name}"? Products linked to this supplier will be unaffected.`)) return;
     try { await api.suppliers.delete(s.id); toast.success('Supplier deleted'); load(); }
     catch (e) { toast.error(e.message); }
+  }
+
+  function getCityName(cityId) {
+    if (!cityId) return null;
+    const city = cities.find(c => c.id === cityId);
+    return city ? city.display_name : null;
   }
 </script>
 
@@ -71,12 +119,13 @@
               <th>Contact Person</th>
               <th>Email</th>
               <th>Phone</th>
-              <th>Address</th>
+              <th>City</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {#each suppliers as s, i (s.id)}
+              {@const cityName = getCityName(s.city_id)}
               <tr class="stagger-row" style="animation-delay: {100 + (i * 50)}ms">
                 <td><div style="font-weight:600">{s.name}</div></td>
                 <td style="color:var(--text-secondary)">{s.contact_name ?? '—'}</td>
@@ -86,7 +135,13 @@
                   {:else}—{/if}
                 </td>
                 <td style="font-family:var(--font-mono);color:var(--text-secondary)">{s.phone ?? '—'}</td>
-                <td style="color:var(--text-muted);font-size:0.8125rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{s.address ?? '—'}</td>
+                <td>
+                  {#if cityName}
+                    <span style="color:var(--text-primary);font-size:0.875rem">{cityName}</span>
+                  {:else}
+                    <span style="color:var(--text-muted);font-size:0.75rem">Not set</span>
+                  {/if}
+                </td>
                 <td>
                   <div class="flex gap-2">
                     <button class="btn btn-ghost btn-sm btn-icon" on:click={() => openEdit(s)} title="Edit">
@@ -141,6 +196,22 @@
           <div class="form-group">
             <label class="label" for="s-address">Address</label>
             <textarea id="s-address" class="textarea input" rows="2" bind:value={form.address} placeholder="Full address…"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="label" for="s-city">City / Location</label>
+            {#if loadingCities}
+              <div style="padding: 0.5rem; color: var(--text-secondary)">Loading cities...</div>
+            {:else}
+              <select id="s-city" class="input" bind:value={form.city_id}>
+                <option value="">-- No city assigned --</option>
+                {#each cities as city (city.id)}
+                  <option value={city.id}>{city.display_name}</option>
+                {/each}
+              </select>
+              <small style="color: var(--text-muted); font-size: 0.75rem">
+                Assigning a city will make this supplier visible on the Globe View
+              </small>
+            {/if}
           </div>
         </div>
       </div>

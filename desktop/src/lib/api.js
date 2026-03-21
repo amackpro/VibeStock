@@ -111,6 +111,20 @@ export const api = {
     movements: (params = {}) => request('GET', `/api/reports/movements?${new URLSearchParams(params)}`),
     valuation: (params = {}) => request('GET', `/api/reports/valuation?${new URLSearchParams(params)}`),
   },
+
+  // ── Geography ──────────────────────────────────────────────────────────────────
+  geography: {
+    // Public endpoints
+    regions:            () => request('GET', '/api/geography/regions'),
+    countriesByRegion:  (regionId) => request('GET', `/api/geography/regions/${regionId}/countries`),
+    citiesByCountry:    (countryId) => request('GET', `/api/geography/countries/${countryId}/cities`),
+    city:               (cityId) => request('GET', `/api/geography/cities/${cityId}`),
+    // Protected endpoints (tenant-specific)
+    regionStats:        (regionId) => request('GET', `/api/geography/regions/${regionId}/stats`),
+    countryStats:       (countryId) => request('GET', `/api/geography/countries/${countryId}/stats`),
+    cityDashboard:      (cityId) => request('GET', `/api/geography/cities/${cityId}/dashboard`),
+    citiesWithInventory: () => request('GET', '/api/geography/cities-with-inventory'),
+  },
 };
 
 // ── WebSocket helper ──────────────────────────────────────────────────────────

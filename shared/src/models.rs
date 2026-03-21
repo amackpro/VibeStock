@@ -52,6 +52,7 @@ pub struct Supplier {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub address: Option<String>,
+    pub city_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -209,4 +210,99 @@ pub struct DashboardStats {
     pub out_of_stock_count: i64,
     pub total_stock_value: f64,
     pub total_movements_today: i64,
+}
+
+// ─── Geography ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Region {
+    pub id: Uuid,
+    pub name: String,
+    pub code: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub description: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Country {
+    pub id: Uuid,
+    pub region_id: Uuid,
+    pub name: String,
+    pub iso2: String,
+    pub iso3: String,
+    pub phone_code: Option<String>,
+    pub capital: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct City {
+    pub id: Uuid,
+    pub country_id: Uuid,
+    pub name: String,
+    pub state_name: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub population: i64,
+    pub is_capital: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CityWithCountry {
+    pub id: Uuid,
+    pub country_id: Uuid,
+    pub country_name: String,
+    pub country_iso2: String,
+    pub name: String,
+    pub state_name: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub population: i64,
+    pub is_capital: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SupplierSummary {
+    pub id: Uuid,
+    pub name: String,
+    pub contact_name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub product_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CityDashboardStats {
+    pub city_id: Uuid,
+    pub city_name: String,
+    pub total_suppliers: i64,
+    pub total_products: i64,
+    pub total_stock_value: f64,
+    pub low_stock_count: i64,
+    pub out_of_stock_count: i64,
+    pub recent_movements: i64,
+    pub suppliers: Vec<SupplierSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct RegionStats {
+    pub region_id: Uuid,
+    pub region_name: String,
+    pub country_count: i64,
+    pub city_count: i64,
+    pub supplier_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CountryStats {
+    pub country_id: Uuid,
+    pub country_name: String,
+    pub city_count: i64,
+    pub supplier_count: i64,
 }

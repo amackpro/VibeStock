@@ -20,6 +20,10 @@ use api::{
         auth_handler::{health, login, register},
         categories::{create_category, delete_category, get_category, list_categories, update_category},
         dashboard::get_stats,
+        geography::{
+            get_city, get_city_dashboard_stats, get_cities_with_inventory, get_country_stats,
+            get_region_stats, list_cities_by_country, list_countries_by_region, list_regions,
+        },
         products::{
             create_product, delete_product, get_product, get_product_by_barcode,
             list_products, update_product,
@@ -79,6 +83,11 @@ async fn main() -> anyhow::Result<()> {
         .route("/suppliers/:id",  get(get_supplier).put(update_supplier).delete(delete_supplier))
         // Stock Movements
         .route("/movements",  get(list_movements).post(create_movement))
+        // Geography (protected - tenant-specific stats)
+        .route("/geography/regions/:id/stats",        get(get_region_stats))
+        .route("/geography/countries/:id/stats",      get(get_country_stats))
+        .route("/geography/cities/:id/dashboard",     get(get_city_dashboard_stats))
+        .route("/geography/cities-with-inventory",    get(get_cities_with_inventory))
         // Admin: User Management
         .route("/users",             get(list_users))
         .route("/users/:id/role",    patch(update_user_role))
@@ -99,7 +108,12 @@ async fn main() -> anyhow::Result<()> {
         .route("/health",          get(health))
         .route("/auth/login",      post(login))
         .route("/auth/register",   post(register))
-        .route("/ws",              get(ws_handler));
+        .route("/ws",              get(ws_handler))
+        // Geography (public - read-only global data)
+        .route("/geography/regions",                  get(list_regions))
+        .route("/geography/regions/:id/countries",    get(list_countries_by_region))
+        .route("/geography/countries/:id/cities",     get(list_cities_by_country))
+        .route("/geography/cities/:id",               get(get_city));
 
     // ── Full router ───────────────────────────────────────────────────────────
     let app = Router::new()

@@ -13,7 +13,7 @@ pub async fn list_suppliers(
     Extension(tenant_id): Extension<Uuid>,
 ) -> AppResult<Json<Vec<Supplier>>> {
     let suppliers = sqlx::query_as::<_, Supplier>(
-        "SELECT id, tenant_id, name, contact_name, email, phone, address, created_at, updated_at \
+        "SELECT id, tenant_id, name, contact_name, email, phone, address, city_id, created_at, updated_at \
          FROM suppliers WHERE tenant_id = $1 ORDER BY name"
     )
     .bind(tenant_id)
@@ -29,7 +29,7 @@ pub async fn get_supplier(
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<Supplier>> {
     let supplier = sqlx::query_as::<_, Supplier>(
-        "SELECT id, tenant_id, name, contact_name, email, phone, address, created_at, updated_at \
+        "SELECT id, tenant_id, name, contact_name, email, phone, address, city_id, created_at, updated_at \
          FROM suppliers WHERE id = $1 AND tenant_id = $2"
     )
     .bind(id)
@@ -48,8 +48,8 @@ pub async fn create_supplier(
 ) -> AppResult<Json<serde_json::Value>> {
     let id = Uuid::new_v4();
     sqlx::query(
-        "INSERT INTO suppliers (id, tenant_id, name, contact_name, email, phone, address) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7)"
+        "INSERT INTO suppliers (id, tenant_id, name, contact_name, email, phone, address, city_id) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
     )
     .bind(id)
     .bind(tenant_id)
@@ -58,6 +58,7 @@ pub async fn create_supplier(
     .bind(&payload.email)
     .bind(&payload.phone)
     .bind(&payload.address)
+    .bind(&payload.city_id)
     .execute(&state.db)
     .await?;
     Ok(Json(serde_json::json!({ "message": "Supplier created", "id": id })))
@@ -77,14 +78,16 @@ pub async fn update_supplier(
          email        = COALESCE($3, email),
          phone        = COALESCE($4, phone),
          address      = COALESCE($5, address),
+         city_id      = COALESCE($6, city_id),
          updated_at   = now()
-         WHERE id = $6 AND tenant_id = $7"
+         WHERE id = $7 AND tenant_id = $8"
     )
     .bind(&payload.name)
     .bind(&payload.contact_name)
     .bind(&payload.email)
     .bind(&payload.phone)
     .bind(&payload.address)
+    .bind(&payload.city_id)
     .bind(id)
     .bind(tenant_id)
     .execute(&state.db)
