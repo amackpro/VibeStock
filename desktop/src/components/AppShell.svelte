@@ -431,13 +431,18 @@
     background: transparent;
     border: 1px solid var(--border-glass);
     border-radius: 10px;
+    color: var(--text-primary);
     cursor: pointer;
     font-size: 1.1rem;
     transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .theme-btn:hover {
     background: var(--glass-hover);
+    color: var(--accent-glow);
   }
 
   /* Main Area */
