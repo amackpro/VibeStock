@@ -11,14 +11,22 @@ import { writable } from 'svelte/store';
 const { subscribe, update } = writable([]);
 
 let _id = 0;
+const timers = new Map(); // Track timeout IDs for cleanup
 
 function add(message, type = 'success', duration = 3500) {
   const id = ++_id;
   update(list => [...list, { id, message, type }]);
-  setTimeout(() => remove(id), duration);
+  const timerId = setTimeout(() => remove(id), duration);
+  timers.set(id, timerId);
 }
 
 function remove(id) {
+  // Clear the timeout if it exists
+  const timerId = timers.get(id);
+  if (timerId !== undefined) {
+    clearTimeout(timerId);
+    timers.delete(id);
+  }
   update(list => list.filter(t => t.id !== id));
 }
 

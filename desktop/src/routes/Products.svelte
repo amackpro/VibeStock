@@ -8,7 +8,7 @@
    *  - Soft-delete
    *  - Stock status badges (in-stock / low / out)
    */
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { api }   from '../lib/api.js';
   import { toast } from '../stores/toast.js';
   import { Pencil, Trash2, X, Search, XCircle } from 'lucide-svelte';
@@ -74,6 +74,10 @@
   }
 
   onMount(() => { loadProducts(); loadMeta(); });
+
+  onDestroy(() => {
+    clearTimeout(searchTimer);
+  });
 
   function clearSupplierFilter() {
     supplierFilter = null;
