@@ -36,7 +36,41 @@
     return () => {
       window.removeEventListener('resize', handleResize);
       if (globe) {
-        // Cleanup
+        // Properly dispose of Globe.gl and Three.js resources
+        try {
+          // Access underlying Three.js components if available
+          const scene = globe.scene();
+          const renderer = globe.renderer();
+
+          // Dispose of scene objects
+          if (scene) {
+            scene.traverse((object) => {
+              if (object.geometry) {
+                object.geometry.dispose();
+              }
+              if (object.material) {
+                if (Array.isArray(object.material)) {
+                  object.material.forEach(material => material.dispose());
+                } else {
+                  object.material.dispose();
+                }
+              }
+            });
+          }
+
+          // Dispose renderer
+          if (renderer) {
+            renderer.dispose();
+          }
+
+          // Clear container
+          if (container) {
+            container.innerHTML = '';
+          }
+        } catch (e) {
+          console.warn('Globe cleanup error:', e);
+        }
+
         globe = null;
       }
     };

@@ -1,21 +1,18 @@
 {
-  "name": "vibestock-desktop",
+  "name": "vibestock-web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "tauri": "tauri"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@babylonjs/core": "^7.54.3",
     "@babylonjs/gui": "^7.54.3",
     "@babylonjs/loaders": "^7.54.3",
     "@babylonjs/materials": "^7.54.3",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2",
     "chart.js": "^4.4.2",
     "globe.gl": "^2.45.1",
     "lucide-svelte": "^0.577.0",
@@ -23,7 +20,6 @@
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3",
-    "@tauri-apps/cli": "^2",
     "svelte": "^4.2.15",
     "vite": "^5.2.0"
   }
