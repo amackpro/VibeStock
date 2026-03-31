@@ -94,3 +94,33 @@ pub async fn auth_middleware(
     req.extensions_mut().insert(effective_tenant_id);
     Ok(next.run(req).await)
 }
+
+// ─── RBAC Middleware ──────────────────────────────────────────────────────────
+
+pub async fn require_admin(
+    req: Request,
+    next: Next,
+) -> Result<Response, AppError> {
+    let claims = req.extensions().get::<Claims>()
+        .ok_or_else(|| AppError::Unauthorized("Unauthorized context".into()))?;
+        
+    if claims.role != "admin" && !claims.is_global_admin {
+        return Err(AppError::Forbidden("Requires admin privileges".into()));
+    }
+    
+    Ok(next.run(req).await)
+}
+
+pub async fn require_manager(
+    req: Request,
+    next: Next,
+) -> Result<Response, AppError> {
+    let claims = req.extensions().get::<Claims>()
+        .ok_or_else(|| AppError::Unauthorized("Unauthorized context".into()))?;
+        
+    if claims.role != "admin" && claims.role != "manager" && !claims.is_global_admin {
+        return Err(AppError::Forbidden("Requires manager privileges".into()));
+    }
+    
+    Ok(next.run(req).await)
+}
