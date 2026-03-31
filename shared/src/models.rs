@@ -57,6 +57,26 @@ pub struct Supplier {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SupplierWithDetails {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub contact_name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub address: Option<String>,
+    pub city_id: Option<Uuid>,
+    pub city_name: Option<String>,
+    pub country_id: Option<Uuid>,
+    pub country_name: Option<String>,
+    pub region_id: Option<Uuid>,
+    pub region_name: Option<String>,
+    pub product_count: i64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 // ─── Product ─────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

@@ -76,7 +76,7 @@ export const api = {
 
   // ── Suppliers ───────────────────────────────────────────────────────────────
   suppliers: {
-    list:   ()          => request('GET',    '/api/suppliers'),
+    list:   (params = {}) => request('GET',    `/api/suppliers?${new URLSearchParams(params)}`),
     create: (data)      => request('POST',   '/api/suppliers',     data),
     update: (id, data)  => request('PUT',    `/api/suppliers/${id}`, data),
     delete: (id)        => request('DELETE', `/api/suppliers/${id}`),

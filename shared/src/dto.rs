@@ -143,6 +143,13 @@ pub struct UpdateSupplierRequest {
     pub city_id: Option<Uuid>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct SupplierFilterParams {
+    pub region_id: Option<Uuid>,
+    pub country_id: Option<Uuid>,
+    pub city_id: Option<Uuid>,
+}
+
 // ─── Stock Movement DTOs ──────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize, Validate)]

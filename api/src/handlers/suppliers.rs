@@ -1,24 +1,50 @@
 use axum::{
-    extract::{Extension, Path, State},
+    extract::{Extension, Path, Query, State},
     Json,
 };
 use uuid::Uuid;
 
 use crate::AppState;
-use shared::{AppError, AppResult, Supplier, CreateSupplierRequest, UpdateSupplierRequest};
+use shared::{AppError, AppResult, Supplier, SupplierWithDetails, SupplierFilterParams, CreateSupplierRequest, UpdateSupplierRequest};
 
 /// GET /api/suppliers — list all suppliers ordered by name
 pub async fn list_suppliers(
     State(state): State<AppState>,
     Extension(tenant_id): Extension<Uuid>,
-) -> AppResult<Json<Vec<Supplier>>> {
-    let suppliers = sqlx::query_as::<_, Supplier>(
-        "SELECT id, tenant_id, name, contact_name, email, phone, address, city_id, created_at, updated_at \
-         FROM suppliers WHERE tenant_id = $1 ORDER BY name"
-    )
-    .bind(tenant_id)
-    .fetch_all(&state.db)
-    .await?;
+    Query(params): Query<SupplierFilterParams>,
+) -> AppResult<Json<Vec<SupplierWithDetails>>> {
+    let mut conditions = vec!["s.tenant_id = $1".to_string()];
+    if params.region_id.is_some()  { conditions.push(format!("r.id = ${}", conditions.len() + 1)); }
+    if params.country_id.is_some() { conditions.push(format!("co.id = ${}", conditions.len() + 1)); }
+    if params.city_id.is_some()    { conditions.push(format!("ci.id = ${}", conditions.len() + 1)); }
+
+    let where_clause = conditions.join(" AND ");
+    let sql = format!(
+        "SELECT 
+            s.id, s.tenant_id, s.name, s.contact_name, s.email, s.phone, s.address, 
+            s.city_id, ci.name as city_name,
+            co.id as country_id, co.name as country_name,
+            r.id as region_id, r.name as region_name,
+            COUNT(DISTINCT p.id) as product_count,
+            s.created_at, s.updated_at
+         FROM suppliers s
+         LEFT JOIN cities ci ON s.city_id = ci.id
+         LEFT JOIN countries co ON ci.country_id = co.id
+         LEFT JOIN regions r ON co.region_id = r.id
+         LEFT JOIN products p ON p.supplier_id = s.id
+         WHERE {where_clause}
+         GROUP BY s.id, ci.name, co.id, co.name, r.id, r.name
+         ORDER BY s.name"
+    );
+
+    let mut q = sqlx::query_as::<_, SupplierWithDetails>(&sql).bind(tenant_id);
+    
+    let mut current_bind = 2;
+    if let Some(id) = params.region_id { q = q.bind(id); current_bind += 1; }
+    if let Some(id) = params.country_id { q = q.bind(id); current_bind += 1; }
+    if let Some(id) = params.city_id    { q = q.bind(id); }
+
+    let suppliers = q.fetch_all(&state.db).await?;
     Ok(Json(suppliers))
 }
 
