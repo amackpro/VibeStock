@@ -1,4 +1,20 @@
 -- Seed India geography data for suppliers (PostgreSQL compatible)
+-- First, ensure we have the unique constraint required for ON CONFLICT
+-- We must clean up any existing duplicates first to avoid "could not create unique index" error
+DO $$
+BEGIN
+    -- Remove any duplicate cities that might have been seeded manually or via other scripts
+    DELETE FROM cities a USING cities b 
+    WHERE a.id < b.id 
+    AND a.name = b.name 
+    AND a.country_id = b.country_id;
+
+    -- Add the unique constraint if it doesn't exist yet
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'cities_name_country_key') THEN
+        ALTER TABLE cities ADD CONSTRAINT cities_name_country_key UNIQUE (name, country_id);
+    END IF;
+END $$;
+
 INSERT INTO regions (id, name, code, latitude, longitude) VALUES
 (gen_random_uuid(), 'Asia', 'AS', 34.0, 100.0)
 ON CONFLICT (name) DO NOTHING;

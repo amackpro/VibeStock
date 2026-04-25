@@ -68,8 +68,8 @@ pub async fn update_category(
 ) -> AppResult<Json<serde_json::Value>> {
     let rows = sqlx::query(
         "UPDATE categories SET \
-         name        = COALESCE($1, name), \
-         description = COALESCE($2, description), \
+         name        = COALESCE($1::text, name), \
+         description = COALESCE($2::text, description), \
          updated_at  = now() \
          WHERE id = $3 AND tenant_id = $4"
     )

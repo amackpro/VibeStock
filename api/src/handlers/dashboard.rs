@@ -31,6 +31,21 @@ pub async fn get_stats(
     .fetch_one(&state.db)
     .await?;
 
+    let recent_activity = sqlx::query_as::<_, shared::StockMovementWithDetails>(
+        "SELECT m.id, m.tenant_id, m.product_id, p.name as product_name, p.sku as product_sku,
+                m.movement_type::text as movement_type, m.quantity, m.reference, m.notes,
+                m.performed_by, u.full_name as performed_by_name, m.created_at
+         FROM stock_movements m
+         JOIN products p ON m.product_id = p.id
+         JOIN users u ON m.performed_by = u.id
+         WHERE m.tenant_id = $1
+         ORDER BY m.created_at DESC
+         LIMIT 10"
+    )
+    .bind(tenant_id)
+    .fetch_all(&state.db)
+    .await?;
+
     Ok(Json(DashboardStats {
         total_products,
         total_categories,
@@ -39,5 +54,6 @@ pub async fn get_stats(
         out_of_stock_count,
         total_stock_value,
         total_movements_today,
+        recent_activity,
     }))
 }
