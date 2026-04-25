@@ -137,13 +137,19 @@ pub async fn create_movement(
     });
 
     if new_qty <= product.reorder_level {
-        let _ = state.ws_tx.send(WsEvent::LowStock {
+        let _ = state.ws_tx.send(shared::WsEvent::LowStock {
             product_id:    payload.product_id,
             product_name:  product.name,
             quantity:      new_qty,
             reorder_level: product.reorder_level,
         });
     }
+
+    let _ = state.ws_tx.send(shared::WsEvent::NewMovement {
+        product_id: payload.product_id,
+        movement_type: payload.movement_type.clone(),
+        quantity: payload.quantity,
+    });
 
     tracing::info!("Movement {} recorded by {}", id, claims.username);
     Ok(Json(serde_json::json!({

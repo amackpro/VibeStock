@@ -90,10 +90,17 @@
   }
 
   function connectWebSocket() {
-    ws = openWebSocket((event) => {
-      if (event.type === 'stock_update') {
+    ws = openWebSocket((data) => {
+      // Rust WsEvent uses #[serde(tag = "event", content = "payload")]
+      const { event, payload } = data;
+      
+      if (event === 'StockUpdated' || event === 'LowStock' || event === 'NewMovement') {
         loadStats();
-        toastStore.show(`Stock updated: ${event.movement_type}`, 'info', 2000);
+        if (event === 'LowStock') {
+          toastStore.show(`Low Stock Alert: ${payload.product_name}`, 'warning', 4000);
+        } else if (event === 'StockUpdated') {
+          // Optional: only show toast if it's a significant update
+        }
       }
     });
   }

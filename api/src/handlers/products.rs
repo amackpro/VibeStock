@@ -213,6 +213,14 @@ pub async fn create_product(
     .await?;
 
     tracing::info!("Product created: {} by {}", id, claims.username);
+
+    // ── Broadcast WebSocket event ─────────────────────────────────────────────
+    let _ = state.ws_tx.send(shared::WsEvent::StockUpdated {
+        product_id: id,
+        product_name: payload.name.clone(),
+        new_quantity: payload.quantity_in_stock,
+    });
+
     Ok(Json(serde_json::json!({ "message": "Product created", "id": id })))
 }
 
@@ -267,6 +275,16 @@ pub async fn update_product(
         return Err(AppError::NotFound(format!("Product {} not found", id)));
     }
     
+    // ── Broadcast WebSocket event (best effort, we don't have the full name here) ──
+    // We could fetch it, but a generic refresh is often enough for the dashboard.
+    // However, Dashboard.svelte listens for specific events.
+    // I'll broadcast a generic 'StockUpdated' with empty name to trigger refresh.
+    let _ = state.ws_tx.send(shared::WsEvent::StockUpdated {
+        product_id: id,
+        product_name: payload.name.clone().unwrap_or_default(),
+        new_quantity: payload.quantity_in_stock.unwrap_or(0),
+    });
+
     Ok(Json(serde_json::json!({ "message": "Product updated" })))
 }
 
