@@ -22,29 +22,31 @@ pub async fn list_users(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
     Extension(tenant_id): Extension<Uuid>,
-) -> AppResult<Json<Vec<User>>> {
+) -> AppResult<Json<Vec<shared::UserWithTenant>>> {
     require_admin(&claims)?;
 
     let users = if claims.is_global_admin {
-        sqlx::query_as::<_, User>(
+        sqlx::query_as::<_, shared::UserWithTenant>(
             "SELECT 
-                id, tenant_id, is_global_admin, username, email, password_hash, full_name, 
-                role::text AS role, is_active, 
-                created_at, updated_at 
-             FROM users 
-             ORDER BY full_name ASC"
+                u.id, u.tenant_id, t.name as tenant_name, u.is_global_admin, u.username, u.email, u.full_name, 
+                u.role::text AS role, u.is_active, 
+                u.created_at, u.updated_at 
+             FROM users u
+             LEFT JOIN tenants t ON t.id = u.tenant_id
+             ORDER BY u.full_name ASC"
         )
         .fetch_all(&state.db)
         .await?
     } else {
-        sqlx::query_as::<_, User>(
+        sqlx::query_as::<_, shared::UserWithTenant>(
             "SELECT 
-                id, tenant_id, is_global_admin, username, email, password_hash, full_name, 
-                role::text AS role, is_active, 
-                created_at, updated_at 
-             FROM users 
-             WHERE tenant_id = $1
-             ORDER BY full_name ASC"
+                u.id, u.tenant_id, t.name as tenant_name, u.is_global_admin, u.username, u.email, u.full_name, 
+                u.role::text AS role, u.is_active, 
+                u.created_at, u.updated_at 
+             FROM users u
+             LEFT JOIN tenants t ON t.id = u.tenant_id
+             WHERE u.tenant_id = $1
+             ORDER BY u.full_name ASC"
         )
         .bind(tenant_id)
         .fetch_all(&state.db)

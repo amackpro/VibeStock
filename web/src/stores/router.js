@@ -5,6 +5,7 @@ export const routeParams = writable({});
 
 const routes = {
   '/': 'Login',
+  '/register': 'Register',
   '/dashboard': 'Dashboard',
   '/products': 'Products',
   '/suppliers': 'Suppliers',

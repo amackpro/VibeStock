@@ -3,12 +3,38 @@
   import { gsap } from 'gsap';
   import { currentRoute, navigate, getRouteName } from '../stores/router.js';
   import { authStore } from '../stores/auth.js';
+  import { api } from '../lib/api.js';
 
   let sidebar;
   let user = null;
+  let tenants = [];
+  let selectedTenant = null;
+  let showTenantMenu = false;
   let hoverIndex = -1;
 
-  authStore.subscribe(a => user = a.user);
+  authStore.subscribe(a => {
+    user = a.user;
+    selectedTenant = a.tenant;
+  });
+
+  async function loadTenants() {
+    if (user?.role === 'admin' || user?.is_global_admin) {
+      try {
+        const result = await api.tenants.list();
+        tenants = result.data || result;
+      } catch (e) {
+        console.error('Failed to load tenants:', e);
+      }
+    }
+  }
+
+  function handleTenantChange(tenant) {
+    if (tenant.id === selectedTenant?.id) return;
+    authStore.setTenant(tenant);
+    showTenantMenu = false;
+    // Hard reload to refresh all data stores for the new tenant
+    window.location.reload();
+  }
 
   const menuItems = [
     { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
@@ -69,6 +95,7 @@
   currentRoute.subscribe(p => currentPath = p);
 
   onMount(() => {
+    loadTenants();
     const tl = gsap.timeline();
 
     tl.fromTo('.sidebar', 
@@ -201,6 +228,45 @@
     <header class="header">
       <h1 class="page-title">{getRouteName(currentPath)}</h1>
       <div class="header-actions">
+        {#if tenants.length > 1 || user?.is_global_admin}
+          <div class="tenant-switcher">
+            <button class="tenant-btn" on:click={() => showTenantMenu = !showTenantMenu}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 21h18M3 7v1a3 3 0 006 0V7m6 0v1a3 3 0 006 0V7m-9 0h.01M4 21V10m16 11V10M12 21V10M7 21h10M12 7V3m0 0a3 3 0 110 6 3 3 0 010-6z"/>
+              </svg>
+              <span class="tenant-name">{selectedTenant?.name || 'Select Tenant'}</span>
+              <svg class="chevron" class:open={showTenantMenu} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+
+            {#if showTenantMenu}
+              <div class="tenant-dropdown">
+                <div class="dropdown-header">Switch Organization</div>
+                <div class="tenant-list">
+                  {#each tenants as t}
+                    <button 
+                      class="tenant-option" 
+                      class:active={t.id === selectedTenant?.id}
+                      on:click={() => handleTenantChange(t)}
+                    >
+                      <div class="tenant-option-info">
+                        <span class="t-name">{t.name}</span>
+                        <span class="t-slug">{t.slug}</span>
+                      </div>
+                      {#if t.id === selectedTenant?.id}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                          <path d="M20 6L9 17l-5-5"/>
+                        </svg>
+                      {/if}
+                    </button>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+          </div>
+        {/if}
+
         <div class="connection-status online">
           <span class="status-dot"></span>
           <span>Live</span>
@@ -436,6 +502,118 @@
   @keyframes pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.5; transform: scale(0.9); }
+  }
+
+  .tenant-switcher {
+    position: relative;
+    z-index: 1000;
+  }
+
+  .tenant-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .tenant-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent-primary);
+  }
+
+  .tenant-name {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chevron {
+    transition: transform 0.2s ease;
+    color: var(--text-muted);
+  }
+
+  .chevron.open {
+    transform: rotate(180deg);
+  }
+
+  .tenant-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 280px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    animation: dropdownFade 0.2s ease-out;
+  }
+
+  @keyframes dropdownFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .dropdown-header {
+    padding: 12px 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .tenant-list {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 4px;
+  }
+
+  .tenant-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    text-align: left;
+  }
+
+  .tenant-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+  }
+
+  .tenant-option.active {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-primary);
+  }
+
+  .tenant-option-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .t-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .t-slug {
+    font-size: 0.75rem;
+    color: var(--text-muted);
   }
 
   .main-content {

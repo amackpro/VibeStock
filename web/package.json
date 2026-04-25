@@ -9,12 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "gsap": "^3.12.5",
     "chart.js": "^4.4.2",
+    "gsap": "^3.12.5",
     "svelte-chartjs": "^3.1.5"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3",
+    "puppeteer": "^24.42.0",
     "svelte": "^4.2.15",
     "vite": "^5.2.0"
   }

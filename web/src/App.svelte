@@ -6,6 +6,7 @@
   import { toastStore } from './stores/toast.js';
 
   import Login from './routes/Login.svelte';
+  import Register from './routes/Register.svelte';
   import Dashboard from './routes/Dashboard.svelte';
   import Products from './routes/Products.svelte';
   import Suppliers from './routes/Suppliers.svelte';
@@ -36,7 +37,9 @@
 
 <Toast />
 
-{#if !authenticated && route === '/'}
+{#if !authenticated && route === '/register'}
+  <Register />
+{:else if !authenticated && route === '/'}
   <Login />
 {:else if authenticated && route === '/'}
   <AppShell>

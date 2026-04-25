@@ -108,8 +108,8 @@ pub async fn register(
         return Err(AppError::Conflict("Username or email already exists".into()));
     }
 
-    let tenant_id = if let Some(tid) = payload.tenant_id {
-        tid
+    let (tenant_id, role_to_assign) = if let Some(tid) = payload.tenant_id {
+        (tid, "staff")
     } else if let Some(ref tenant_name) = payload.tenant_name {
         let slug = tenant_name.to_lowercase().replace(' ', "-");
         let tid = Uuid::new_v4();
@@ -121,7 +121,7 @@ pub async fn register(
         .bind(&slug)
         .execute(&state.db)
         .await?;
-        tid
+        (tid, "admin")
     } else {
         return Err(AppError::BadRequest("Either tenant_id or tenant_name is required".into()));
     };
@@ -132,7 +132,7 @@ pub async fn register(
     let id = Uuid::new_v4();
     sqlx::query(
         "INSERT INTO users (id, tenant_id, username, email, password_hash, full_name, role) \
-         VALUES ($1, $2, $3, $4, $5, $6, 'staff')"
+         VALUES ($1, $2, $3, $4, $5, $6, $7::user_role)"
     )
     .bind(id)
     .bind(tenant_id)
@@ -140,6 +140,7 @@ pub async fn register(
     .bind(&payload.email)
     .bind(hash)
     .bind(&payload.full_name)
+    .bind(role_to_assign)
     .execute(&state.db)
     .await?;
 

@@ -126,7 +126,15 @@ export const api = {
 };
 
 export function openWebSocket(onMessage) {
-  const wsUrl = BASE_URL.replace(/^http/, 'ws') + '/api/ws';
+  let wsUrl;
+  if (BASE_URL.startsWith('http')) {
+    wsUrl = BASE_URL.replace(/^http/, 'ws') + '/ws';
+  } else {
+    // Relative URL like '/api'
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsUrl = `${protocol}//${window.location.host}${BASE_URL}/ws`;
+  }
+  
   const ws = new WebSocket(wsUrl);
 
   ws.onopen    = () => console.info('[WS] Connected');

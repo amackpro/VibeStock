@@ -2,12 +2,15 @@
   import { onMount } from 'svelte';
   import { gsap } from 'gsap';
   import { api, checkConnection } from '../lib/api.js';
-  import { authStore } from '../stores/auth.js';
   import { navigate } from '../stores/router.js';
   import { toastStore } from '../stores/toast.js';
 
+  let fullName = '';
   let username = '';
+  let email = '';
   let password = '';
+  let tenantName = '';
+
   let loading = false;
   let error = '';
   let serverConnected = true;
@@ -67,16 +70,16 @@
       '-=0.2'
     );
 
-    tl.fromTo('.demo-credentials', 
+    tl.fromTo('.register-link', 
       { y: 20, opacity: 0 },
       { y: 0, opacity: 1, duration: 0.5 },
       '-=0.2'
     );
   });
 
-  async function handleLogin() {
-    if (!username || !password) {
-      error = 'Please enter username and password';
+  async function handleRegister() {
+    if (!fullName || !username || !email || !password || !tenantName) {
+      error = 'Please fill in all fields';
       return;
     }
 
@@ -84,22 +87,17 @@
     error = '';
 
     try {
-      const response = await api.auth.login({ username, password });
-      const user = {
-        id: response.user_id,
-        username: response.username,
-        full_name: response.full_name,
-        role: response.role,
-        is_global_admin: response.is_global_admin
-      };
-      const tenant = response.accessible_tenants?.length > 0 
-        ? response.accessible_tenants[0] 
-        : { id: response.tenant_id, name: response.tenant_name };
-      await authStore.login(response.token, user, tenant);
-      toastStore.show('Welcome back!', 'success');
-      navigate('/dashboard');
+      await api.auth.register({ 
+        full_name: fullName,
+        username,
+        email,
+        password,
+        tenant_name: tenantName
+      });
+      toastStore.show('Registration successful! Please log in.', 'success');
+      navigate('/');
     } catch (e) {
-      error = e.message || 'Login failed';
+      error = e.message || 'Registration failed';
       gsap.fromTo('.error-message', 
         { x: -10, opacity: 0 },
         { x: 0, opacity: 1, duration: 0.3 }
@@ -110,7 +108,7 @@
   }
 
   function handleKeydown(e) {
-    if (e.key === 'Enter') handleLogin();
+    if (e.key === 'Enter') handleRegister();
   }
 </script>
 
@@ -141,13 +139,13 @@
         <span class="logo-text">VibeStock</span>
       </div>
       
-      <h1 class="login-title">Welcome back</h1>
-      <p class="login-subtitle">Sign in to manage your inventory</p>
+      <h1 class="login-title">Create an Account</h1>
+      <p class="login-subtitle">Join us to manage your inventory</p>
     </div>
 
-    <form class="login-form" bind:this={formRef} on:submit|preventDefault={handleLogin}>
+    <form class="login-form" bind:this={formRef} on:submit|preventDefault={handleRegister}>
       <div class="input-group">
-        <label class="input-label" for="username">Username</label>
+        <label class="input-label" for="fullName">Full Name</label>
         <div class="input-wrapper">
           <span class="input-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -157,10 +155,71 @@
           </span>
           <input 
             type="text" 
+            id="fullName"
+            class="input-field" 
+            placeholder="John Doe"
+            bind:value={fullName}
+            on:keydown={handleKeydown}
+          />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="tenantName">Organization Name</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+          </span>
+          <input 
+            type="text" 
+            id="tenantName"
+            class="input-field" 
+            placeholder="Acme Corp"
+            bind:value={tenantName}
+            on:keydown={handleKeydown}
+          />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="username">Username</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </span>
+          <input 
+            type="text" 
             id="username"
             class="input-field" 
-            placeholder="Enter your username"
+            placeholder="johndoe"
             bind:value={username}
+            on:keydown={handleKeydown}
+          />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="email">Email Address</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </span>
+          <input 
+            type="email" 
+            id="email"
+            class="input-field" 
+            placeholder="john@example.com"
+            bind:value={email}
             on:keydown={handleKeydown}
           />
         </div>
@@ -179,7 +238,7 @@
             type="password" 
             id="password"
             class="input-field" 
-            placeholder="Enter your password"
+            placeholder="Create a strong password"
             bind:value={password}
             on:keydown={handleKeydown}
           />
@@ -199,27 +258,22 @@
       <button type="submit" class="login-btn" disabled={loading || !serverConnected}>
         {#if loading}
           <span class="spinner"></span>
-          Signing in...
+          Registering...
         {:else if !serverConnected}
           Server Unavailable
         {:else}
-          Sign in
+          Sign Up
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
         {/if}
       </button>
+
+      <div class="register-link">
+        Already have an account? 
+        <a href="#/" on:click|preventDefault={() => navigate('/')}>Log in</a>
+      </div>
     </form>
-
-    <div class="demo-credentials">
-      <span class="demo-label">Demo credentials</span>
-      <code>admin / Password@123</code>
-    </div>
-
-    <div class="register-link">
-      Don't have an account? 
-      <a href="#/register" on:click|preventDefault={() => navigate('/register')}>Sign up</a>
-    </div>
   </div>
 </div>
 
@@ -282,7 +336,7 @@
 
   .login-container {
     width: 100%;
-    max-width: 420px;
+    max-width: 480px;
     padding: 40px;
     position: relative;
     z-index: 1;
@@ -290,14 +344,14 @@
 
   .login-header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
   }
 
   .logo {
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
   .logo-icon {
@@ -336,7 +390,7 @@
   }
 
   .input-group {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
   .input-label {
@@ -416,6 +470,7 @@
     cursor: pointer;
     transition: all var(--transition-base);
     box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+    margin-top: 10px;
   }
 
   .login-btn:hover:not(:disabled) {
@@ -443,30 +498,6 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
-  }
-
-  .demo-credentials {
-    margin-top: 24px;
-    text-align: center;
-    padding: 16px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px dashed var(--border-color);
-    border-radius: var(--radius-md);
-  }
-
-  .demo-label {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-  }
-
-  .demo-credentials code {
-    font-family: 'DM Sans', monospace;
-    color: var(--accent-secondary);
-    font-size: 0.9rem;
   }
 
   .register-link {
