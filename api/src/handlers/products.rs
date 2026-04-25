@@ -228,9 +228,45 @@ pub async fn create_product(
 pub async fn update_product(
     State(state): State<AppState>,
     Extension(tenant_id): Extension<Uuid>,
+    Extension(claims): Extension<crate::auth::Claims>,
     Path(id): Path<Uuid>,
     Json(payload): Json<shared::UpdateProductRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
+    let mut tx = state.db.begin().await.map_err(AppError::Database)?;
+
+    // ── Fetch current state for audit and broadcast ──────────────────────────
+    let current: (i32, String, i32) = sqlx::query_as(
+        "SELECT quantity_in_stock, name, reorder_level FROM products WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(id)
+    .bind(tenant_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::Database)?
+    .map(|r: (i32, String, i32)| (r.0, r.1, r.2))
+    .ok_or_else(|| AppError::NotFound(format!("Product {} not found", id)))?;
+
+    // ── Handle stock adjustment audit ─────────────────────────────────────────
+    if let Some(new_qty) = payload.quantity_in_stock {
+        if current.0 != new_qty {
+            sqlx::query(
+                "INSERT INTO stock_movements \
+                 (id, tenant_id, product_id, movement_type, quantity, reference, notes, performed_by) \
+                 VALUES ($1, $2, $3, 'adjustment', $4, $5, $6, $7)"
+            )
+            .bind(Uuid::new_v4())
+            .bind(tenant_id)
+            .bind(id)
+            .bind(new_qty)
+            .bind(Some("Manual Adjustment"))
+            .bind(Some(format!("Stock changed from {} to {} via product edit", current.0, new_qty)))
+            .bind(claims.sub)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::Database)?;
+        }
+    }
+
     let result = sqlx::query(
         "UPDATE products SET
          name              = COALESCE($1::text,   name),
@@ -264,26 +300,37 @@ pub async fn update_product(
     .bind(payload.quantity_in_stock)
     .bind(id)
     .bind(tenant_id)
-    .execute(&state.db)
+    .execute(&mut *tx)
     .await
     .map_err(|e| {
         tracing::error!("Database error updating product {}: {}", id, e);
         AppError::Database(e)
     })?;
 
+    tx.commit().await.map_err(AppError::Database)?;
+
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound(format!("Product {} not found", id)));
     }
     
-    // ── Broadcast WebSocket event (best effort, we don't have the full name here) ──
-    // We could fetch it, but a generic refresh is often enough for the dashboard.
-    // However, Dashboard.svelte listens for specific events.
-    // I'll broadcast a generic 'StockUpdated' with empty name to trigger refresh.
+    // ── Broadcast WebSocket event ─────────────────────────────────────────────
+    let final_name = payload.name.clone().unwrap_or(current.1);
+    let final_qty = payload.quantity_in_stock.unwrap_or(current.0);
+
     let _ = state.ws_tx.send(shared::WsEvent::StockUpdated {
         product_id: id,
-        product_name: payload.name.clone().unwrap_or_default(),
-        new_quantity: payload.quantity_in_stock.unwrap_or(0),
+        product_name: final_name.clone(),
+        new_quantity: final_qty,
     });
+
+    if final_qty <= payload.reorder_level.unwrap_or(current.2) {
+        let _ = state.ws_tx.send(shared::WsEvent::LowStock {
+            product_id: id,
+            product_name: final_name,
+            quantity: final_qty,
+            reorder_level: payload.reorder_level.unwrap_or(current.2),
+        });
+    }
 
     Ok(Json(serde_json::json!({ "message": "Product updated" })))
 }

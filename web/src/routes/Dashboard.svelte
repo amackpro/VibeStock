@@ -124,12 +124,14 @@
     const duration = 1.2;
     const ease = 'power3.out';
 
+    // We animate the displayed values in the stats object
     gsap.to({ val: 0 }, {
       val: stats.total_products || 0,
       duration,
       ease,
       onUpdate: function() {
-        stats.totalProducts = Math.round(this.targets()[0].val);
+        stats.total_products = Math.round(this.targets()[0].val);
+        stats = stats; // Trigger Svelte reactivity
       }
     });
 
@@ -138,7 +140,18 @@
       duration,
       ease,
       onUpdate: function() {
-        stats.totalValue = Math.round(this.targets()[0].val);
+        stats.total_stock_value = Math.round(this.targets()[0].val);
+        stats = stats;
+      }
+    });
+
+    gsap.to({ val: 0 }, {
+      val: stats.low_stock_count || 0,
+      duration,
+      ease,
+      onUpdate: function() {
+        stats.low_stock_count = Math.round(this.targets()[0].val);
+        stats = stats;
       }
     });
 
@@ -147,7 +160,8 @@
       duration,
       ease,
       onUpdate: function() {
-        stats.todayMovements = Math.round(this.targets()[0].val);
+        stats.total_movements_today = Math.round(this.targets()[0].val);
+        stats = stats;
       }
     });
   }
@@ -203,10 +217,10 @@
   }
 
   const kpis = [
-    { key: 'totalProducts', label: 'Total Products', icon: 'package', color: '#6366f1' },
-    { key: 'totalValue', label: 'Stock Value (₹)', icon: 'rupee', color: '#22d3ee', format: 'currency' },
-    { key: 'lowStockItems', label: 'Low Stock Alerts', icon: 'alert', color: '#f59e0b' },
-    { key: 'todayMovements', label: "Today's Movements", icon: 'activity', color: '#10b981' }
+    { key: 'total_products', label: 'Total Products', icon: 'package', color: '#6366f1' },
+    { key: 'total_stock_value', label: 'Stock Value (₹)', icon: 'rupee', color: '#22d3ee', format: 'currency' },
+    { key: 'low_stock_count', label: 'Low Stock Alerts', icon: 'alert', color: '#f59e0b' },
+    { key: 'total_movements_today', label: "Today's Movements", icon: 'activity', color: '#10b981' }
   ];
 </script>
 

@@ -62,6 +62,7 @@ pub async fn create_movement(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateStockMovementRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
+    let mut tx = state.db.begin().await.map_err(AppError::Database)?;
 
     // ── Validate movement type ────────────────────────────────────────────────
     match payload.movement_type.as_str() {
@@ -81,7 +82,7 @@ pub async fn create_movement(
     )
     .bind(payload.product_id)
     .bind(tenant_id)
-    .fetch_optional(&state.db)
+    .fetch_optional(&mut *tx)
     .await?
     .ok_or_else(|| AppError::NotFound(format!("Product {} not found", payload.product_id)))?;
 
@@ -117,17 +118,21 @@ pub async fn create_movement(
     .bind(&payload.reference)
     .bind(&payload.notes)
     .bind(claims.sub)
-    .execute(&state.db)
+    .execute(&mut *tx)
     .await?;
 
     // ── Update product stock ──────────────────────────────────────────────────
     sqlx::query(
-        "UPDATE products SET quantity_in_stock = $1, updated_at = now() WHERE id = $2"
+        "UPDATE products SET quantity_in_stock = $1, updated_at = now() \
+         WHERE id = $2 AND tenant_id = $3"
     )
     .bind(new_qty)
     .bind(payload.product_id)
-    .execute(&state.db)
+    .bind(tenant_id)
+    .execute(&mut *tx)
     .await?;
+
+    tx.commit().await.map_err(AppError::Database)?;
 
     // ── Broadcast WebSocket events ────────────────────────────────────────────
     let _ = state.ws_tx.send(WsEvent::StockUpdated {
@@ -137,7 +142,7 @@ pub async fn create_movement(
     });
 
     if new_qty <= product.reorder_level {
-        let _ = state.ws_tx.send(shared::WsEvent::LowStock {
+        let _ = state.ws_tx.send(WsEvent::LowStock {
             product_id:    payload.product_id,
             product_name:  product.name,
             quantity:      new_qty,
@@ -145,7 +150,7 @@ pub async fn create_movement(
         });
     }
 
-    let _ = state.ws_tx.send(shared::WsEvent::NewMovement {
+    let _ = state.ws_tx.send(WsEvent::NewMovement {
         product_id: payload.product_id,
         movement_type: payload.movement_type.clone(),
         quantity: payload.quantity,

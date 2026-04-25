@@ -49,7 +49,8 @@
 
   async function loadProducts() {
     try {
-      products = await api.products.list();
+      const result = await api.products.list({ limit: 1000 }); // Get a larger list for selection
+      products = result.data || result;
     } catch (e) {
       console.error('Failed to load products', e);
     }
@@ -58,7 +59,7 @@
   function openModal() {
     form = {
       product_id: '',
-      movement_type: 'IN',
+      movement_type: 'in',
       quantity: 1,
       notes: ''
     };
