@@ -83,6 +83,7 @@ pub async fn auth_middleware(
     let claims = verify_token(&token, &state.config.jwt_secret)?;
     
     let header_tenant_id = extract_tenant_id(req.headers());
+    tracing::debug!("Auth: is_global_admin={}, header_tenant_id={:?}, claims.tenant_id={}", claims.is_global_admin, header_tenant_id, claims.tenant_id);
     
     let effective_tenant_id = if claims.is_global_admin {
         header_tenant_id.unwrap_or(claims.tenant_id)
@@ -104,7 +105,8 @@ pub async fn require_admin(
     let claims = req.extensions().get::<Claims>()
         .ok_or_else(|| AppError::Unauthorized("Unauthorized context".into()))?;
         
-    if claims.role != "admin" && !claims.is_global_admin {
+    let role_lower = claims.role.to_lowercase();
+    if role_lower != "admin" && !claims.is_global_admin {
         return Err(AppError::Forbidden("Requires admin privileges".into()));
     }
     
@@ -118,7 +120,8 @@ pub async fn require_manager(
     let claims = req.extensions().get::<Claims>()
         .ok_or_else(|| AppError::Unauthorized("Unauthorized context".into()))?;
         
-    if claims.role != "admin" && claims.role != "manager" && !claims.is_global_admin {
+    let role_lower = claims.role.to_lowercase();
+    if role_lower != "admin" && role_lower != "manager" && !claims.is_global_admin {
         return Err(AppError::Forbidden("Requires manager privileges".into()));
     }
     

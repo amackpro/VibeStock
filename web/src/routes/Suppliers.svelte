@@ -1,432 +1,670 @@
 <script>
   import { onMount } from 'svelte';
-  import { api }   from '../lib/api.js';
-  import { toast } from '../stores/toast.js';
-  import { Pencil, Trash2, X, MapPin, Filter, ChevronDown } from 'lucide-svelte';
+  import { fade, scale } from 'svelte/transition';
+  import { backOut } from 'svelte/easing';
+  import { gsap } from 'gsap';
+  import { api } from '../lib/api.js';
+  import { toastStore } from '../stores/toast.js';
 
-  let suppliers  = [];
-  let loading    = false;
-  let showModal  = false;
-  let editing    = null;
-  let form       = emptyForm();
+  let suppliers = [];
+  let regions = [];
+  let countries = [];
+  let loading = true;
+  let searchQuery = '';
+  let showModal = false;
+  let editingSupplier = null;
   
-  // Geography filters
-  let regions         = [];
-  let countries       = [];
-  let cities          = [];
-  let selectedRegion  = '';
+  let selectedRegion = 'Asia';
   let selectedCountry = '';
-  let selectedCity    = '';
-  let geoLoading      = false;
-  let showFilters     = false;
-
-  // Filter labels for chips
-  $: regionLabel  = regions.find(r => r.id === selectedRegion)?.name ?? '';
-  $: countryLabel = countries.find(c => c.id === selectedCountry)?.name ?? '';
-  $: cityLabel    = cities.find(c => c.id === selectedCity)?.name ?? '';
-  $: hasFilters   = !!(selectedRegion);
-
-  function emptyForm() {
-    return { name: '', contact_name: '', email: '', phone: '', address: '', city_id: '' };
-  }
-
-  async function load() {
-    loading = true;
-    try { 
-      const params = {};
-      if (selectedRegion)  params.region_id = selectedRegion;
-      if (selectedCountry) params.country_id = selectedCountry;
-      if (selectedCity)    params.city_id = selectedCity;
-      
-      suppliers = await api.suppliers.list(params); 
-    }
-    catch (e) { toast.error(e.message); }
-    finally { loading = false; }
-  }
-
-  // Geography logic
-  async function loadRegions() {
-    try { regions = await api.geography.regions(); } catch {}
-  }
-
-  async function onRegionChange() {
-    selectedCountry = ''; selectedCity = ''; countries = []; cities = [];
-    if (selectedRegion) {
-      geoLoading = true;
-      try { countries = await api.geography.countriesByRegion(selectedRegion); } catch {}
-      finally { geoLoading = false; }
-    }
-    load();
-  }
-
-  async function onCountryChange() {
-    selectedCity = ''; cities = [];
-    if (selectedCountry) {
-      geoLoading = true;
-      try { cities = await api.geography.citiesByCountry(selectedCountry); } catch {}
-      finally { geoLoading = false; }
-    }
-    load();
-  }
-
-  function onCityChange() { load(); }
-
-  function clearFilters() {
-    selectedRegion = ''; selectedCountry = ''; selectedCity = '';
-    countries = []; cities = [];
-    load();
-  }
-
-  // Modal logic
-  let allCities = [];
-  async function loadAllCitiesForModal() {
-    try {
-      // For assignment, we'll just show cities that have inventory or a sensible subset
-      // In this demo, we'll fetch all cities via the regions/countries loop once
-      // to keep the assignment dropdown useful.
-      const regs = await api.geography.regions();
-      const list = [];
-      for (const r of regs) {
-        const counts = await api.geography.countriesByRegion(r.id);
-        for (const c of counts) {
-          const cts = await api.geography.citiesByCountry(c.id);
-          cts.forEach(city => list.push({ ...city, display: `${city.name}, ${c.name}` }));
-        }
-      }
-      allCities = list.sort((a,b) => a.display.localeCompare(b.display));
-    } catch {}
-  }
+  
+  let form = {
+    name: '',
+    contact_name: '',
+    email: '',
+    phone: '',
+    address: ''
+  };
 
   onMount(async () => {
-    await Promise.all([load(), loadRegions(), loadAllCitiesForModal()]);
+    await Promise.all([loadFilters(), loadSuppliers()]);
+    animateEntrance();
   });
 
-  function openAdd()  { editing = null; form = emptyForm(); showModal = true; }
-  function openEdit(s) {
-    editing = s;
-    form = {
-      name: s.name,
-      contact_name: s.contact_name ?? '',
-      email: s.email ?? '',
-      phone: s.phone ?? '',
-      address: s.address ?? '',
-      city_id: s.city_id ?? ''
-    };
+  async function loadFilters() {
+    try {
+      const regRes = await api.geography.regions();
+      regions = regRes.data || regRes;
+
+      const asia = regions.find(r => r.name === 'Asia');
+      if (asia) {
+        const countryRes = await api.geography.countriesByRegion(asia.id);
+        countries = countryRes.data || countryRes;
+        const india = countries.find(c => c.name === 'India');
+        if (india) {
+          selectedCountry = india.name;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load filters', e);
+    }
+  }
+
+  async function loadSuppliers() {
+    loading = true;
+    try {
+      const params = { region: selectedRegion };
+      if (selectedCountry && selectedCountry !== '') params.country = selectedCountry;
+      
+      const result = await api.suppliers.list(params);
+      suppliers = result.data || result;
+    } catch (e) {
+      toastStore.show('Failed to load suppliers', 'error');
+    } finally {
+      loading = false;
+    }
+  }
+
+  function handleFilterChange() {
+    loadSuppliers();
+  }
+
+  async function handleRegionChange() {
+    const region = regions.find(r => r.name === selectedRegion);
+    if (region) {
+      try {
+        const countryRes = await api.geography.countriesByRegion(region.id);
+        countries = countryRes.data || countryRes;
+        if (!countries.find(c => c.name === selectedCountry)) {
+          selectedCountry = '';
+        }
+      } catch (e) {
+        console.error('Failed to update countries', e);
+      }
+    } else {
+      countries = [];
+      selectedCountry = '';
+    }
+    loadSuppliers();
+  }
+
+  function animateEntrance() {
+    const tl = gsap.timeline();
+
+    tl.fromTo('.page-header', 
+      { y: -20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }
+    );
+
+    tl.fromTo('.filter-bar', 
+      { y: -10, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' },
+      '-=0.3'
+    );
+
+    tl.fromTo('.suppliers-grid', 
+      { y: 30, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' },
+      '-=0.3'
+    );
+  }
+
+  function openModal(supplier = null) {
+    editingSupplier = supplier;
+    if (supplier) {
+      form = { 
+        name: supplier.name || '',
+        contact_name: supplier.contact_name || '',
+        email: supplier.email || '',
+        phone: supplier.phone || '',
+        address: supplier.address || ''
+      };
+    } else {
+      form = {
+        name: '',
+        contact_name: '',
+        email: '',
+        phone: '',
+        address: ''
+      };
+    }
     showModal = true;
   }
-  function closeModal() { showModal = false; }
 
-  async function save() {
+  function closeModal() {
+    showModal = false;
+    editingSupplier = null;
+  }
+
+  async function saveSupplier() {
     try {
-      if (editing) { await api.suppliers.update(editing.id, form); toast.success('Supplier updated'); }
-      else         { await api.suppliers.create(form);             toast.success('Supplier added');   }
-      closeModal(); load();
-    } catch (e) { toast.error(e.message); }
+      const payload = { ...form };
+      
+      if (!payload.email) payload.email = null;
+      if (!payload.phone) payload.phone = null;
+      if (!payload.address) payload.address = null;
+
+      if (editingSupplier) {
+        await api.suppliers.update(editingSupplier.id, payload);
+        toastStore.show('Supplier updated successfully', 'success');
+      } else {
+        await api.suppliers.create(payload);
+        toastStore.show('Supplier created successfully', 'success');
+      }
+      await loadSuppliers();
+      closeModal();
+    } catch (e) {
+      toastStore.show(e.message, 'error');
+    }
   }
 
-  async function del(s) {
-    if (!confirm(`Delete supplier "${s.name}"? Products linked to this supplier will be unaffected.`)) return;
-    try { await api.suppliers.delete(s.id); toast.success('Supplier deleted'); load(); }
-    catch (e) { toast.error(e.message); }
+  async function deleteSupplier(id) {
+    if (!confirm('Are you sure you want to delete this supplier?')) return;
+    
+    try {
+      await api.suppliers.delete(id);
+      toastStore.show('Supplier deleted', 'success');
+      await loadSuppliers();
+    } catch (e) {
+      toastStore.show(e.message, 'error');
+    }
   }
+
+  $: filteredSuppliers = suppliers.filter(s => {
+    const q = searchQuery.toLowerCase();
+    return (s.name || '').toLowerCase().includes(q) ||
+           (s.contact_name || '').toLowerCase().includes(q) ||
+           (s.email || '').toLowerCase().includes(q);
+  });
 </script>
 
-<div class="page">
+<div class="suppliers-page">
   <div class="page-header">
-    <div class="page-title-group">
-      <h1 class="page-title">Suppliers</h1>
-      <div class="flex gap-2 items-center flex-wrap">
-        <p class="page-subtitle">
-          {suppliers.length} supplier{suppliers.length !== 1 ? 's' : ''}
-          {hasFilters ? '(filtered)' : ''}
-        </p>
-        {#if regionLabel}
-          <span class="chip chip-region"><MapPin size={11}/>{regionLabel}
-            {#if !countryLabel}<button class="chip-x" on:click={clearFilters}><X size={11}/></button>{/if}
-          </span>
-        {/if}
-        {#if countryLabel}
-          <span class="chip-arrow">›</span>
-          <span class="chip chip-country">{countryLabel}
-            {#if !cityLabel}<button class="chip-x" on:click={clearFilters}><X size={11}/></button>{/if}
-          </span>
-        {/if}
-        {#if cityLabel}
-          <span class="chip-arrow">›</span>
-          <span class="chip chip-city">{cityLabel}
-            <button class="chip-x" on:click={clearFilters}><X size={11}/></button>
-          </span>
-        {/if}
+    <div class="header-left">
+      <div class="search-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input 
+          type="text" 
+          placeholder="Search suppliers..." 
+          bind:value={searchQuery}
+          class="search-input"
+        />
       </div>
     </div>
-    <div class="flex gap-3 items-center">
-      <button 
-        class="btn btn-ghost filter-btn" 
-        class:active={showFilters}
-        on:click={() => showFilters = !showFilters}
-      >
-        <Filter size={15} />
-        Filters
-        <span class="chevron" class:rotated={showFilters}>
-          <ChevronDown size={13} />
-        </span>
+    <div class="header-right">
+      <button class="btn btn-primary" on:click={() => openModal()}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Add Supplier
       </button>
-      <button id="btn-add-supplier" class="btn btn-primary" on:click={openAdd}>+ Add Supplier</button>
     </div>
   </div>
 
-  <!-- ── Filter Panel ── -->
-  {#if showFilters}
-    <div class="filter-panel stagger-row" style="animation-delay:0ms">
-      <div class="filter-panel-inner">
-        <div class="filter-header">
-          <span class="filter-title">
-            <Filter size={14} style="color:var(--accent-glow)" />
-            Filter by Location
-          </span>
-          {#if hasFilters}
-            <button class="btn btn-ghost btn-sm" on:click={clearFilters}>Clear All</button>
-          {/if}
-        </div>
-        <div class="filter-row">
-          <div class="filter-group">
-            <label class="filter-label">Region</label>
-            <div class="sel-wrap">
-              <select class="f-select" bind:value={selectedRegion} on:change={onRegionChange}>
-                <option value="">All Regions</option>
-                {#each regions as r}<option value={r.id}>{r.name}</option>{/each}
-              </select>
-            </div>
-          </div>
-          <span class="loc-arrow">›</span>
-          <div class="filter-group">
-            <label class="filter-label">Country</label>
-            <div class="sel-wrap">
-              <select class="f-select" bind:value={selectedCountry} on:change={onCountryChange} disabled={!selectedRegion}>
-                <option value="">All Countries</option>
-                {#each countries as c}<option value={c.id}>{c.name}</option>{/each}
-              </select>
-            </div>
-          </div>
-          <span class="loc-arrow">›</span>
-          <div class="filter-group">
-            <label class="filter-label">City</label>
-            <div class="sel-wrap">
-              <select class="f-select" bind:value={selectedCity} on:change={onCityChange} disabled={!selectedCountry}>
-                <option value="">All Cities</option>
-                {#each cities as c}<option value={c.id}>{c.name}</option>{/each}
-              </select>
-            </div>
-          </div>
-          {#if geoLoading}
-            <div class="spinner" style="width:16px;height:16px;border-width:2px;align-self:flex-end;margin-bottom:6px"></div>
-          {/if}
-        </div>
-      </div>
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label class="filter-label">Region</label>
+      <select class="filter-select" bind:value={selectedRegion} on:change={handleRegionChange}>
+        {#each regions as region}
+          <option value={region.name}>{region.name}</option>
+        {/each}
+      </select>
     </div>
-  {/if}
+    <div class="filter-group">
+      <label class="filter-label">Country</label>
+      <select class="filter-select" bind:value={selectedCountry} on:change={handleFilterChange}>
+        <option value="">All Countries</option>
+        {#each countries as country}
+          <option value={country.name}>{country.name}</option>
+        {/each}
+      </select>
+    </div>
+    <div class="filter-stats">
+      <span class="stat-item">
+        <strong>{suppliers.length}</strong> suppliers
+      </span>
+    </div>
+  </div>
 
-  {#if loading}
-    <div style="display:flex;justify-content:center;padding:4rem">
-      <div class="spinner" style="width:32px;height:32px;border-width:3px"></div>
-    </div>
-  {:else}
-    <div class="card stagger-row" style="padding:0;overflow:hidden;animation-delay: 50ms">
-      <div class="table-wrapper" style="border-radius:0;border:none">
-        <table>
-          <thead>
-            <tr>
-              <th>Supplier Name</th>
-              <th>Contact Person</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th class="tr">Products</th>
-              <th>City</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each suppliers as s, i (s.id)}
-              <tr class="stagger-row" style="animation-delay: {100 + (i * 20)}ms">
-                <td>
-                  <div style="font-weight:600; color:var(--text-primary)">{s.name}</div>
-                </td>
-                <td style="color:var(--text-secondary)">{s.contact_name ?? '—'}</td>
-                <td>
-                  {#if s.email}
-                    <a href="mailto:{s.email}" class="link">{s.email}</a>
-                  {:else}—{/if}
-                </td>
-                <td style="font-family:var(--font-mono);color:var(--text-secondary);font-size:0.85rem">{s.phone ?? '—'}</td>
-                <td class="tr">
-                   <span class="count-badge">{s.product_count}</span>
-                </td>
-                <td>
-                  {#if s.city_name}
-                    <div style="display:flex; flex-direction:column">
-                      <span style="color:var(--text-primary);font-size:0.875rem;font-weight:500">{s.city_name}</span>
-                      <span style="color:var(--text-muted);font-size:0.75rem">{s.country_name || ''}</span>
-                    </div>
-                  {:else}
-                    <span style="color:var(--text-muted);font-size:0.75rem;font-style:italic">Not set</span>
-                  {/if}
-                </td>
-                <td>
-                  <div class="flex gap-2">
-                    <button class="btn btn-ghost btn-sm btn-icon" on:click={() => openEdit(s)} title="Edit">
-                      <Pencil size={14} />
-                    </button>
-                    <button class="btn btn-danger btn-sm btn-icon" on:click={() => del(s)} title="Delete">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            {/each}
-            {#if suppliers.length === 0}
-              <tr><td colspan="7" class="empty-state">No suppliers found.</td></tr>
-            {/if}
-          </tbody>
-        </table>
+  <div class="suppliers-grid">
+    {#if loading}
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading suppliers...</span>
       </div>
-    </div>
-  {/if}
+    {:else if filteredSuppliers.length === 0}
+      <div class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+        </svg>
+        <span>No suppliers found</span>
+      </div>
+    {:else}
+      {#each filteredSuppliers as supplier, i (supplier.id)}
+        <div class="supplier-card" style="animation-delay: {i * 0.05}s">
+          <div class="supplier-header">
+            <div class="supplier-avatar">
+              {supplier.name.charAt(0).toUpperCase()}
+            </div>
+            <div class="supplier-info">
+              <h3 class="supplier-name">{supplier.name}</h3>
+              {#if supplier.contact_name}
+                <span class="contact-person">{supplier.contact_name}</span>
+              {/if}
+            </div>
+          </div>
+
+          <div class="supplier-details">
+            {#if supplier.email}
+              <div class="detail-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <path d="M22 6l-10 7L2 6"/>
+                </svg>
+                <span>{supplier.email}</span>
+              </div>
+            {/if}
+            {#if supplier.phone}
+              <div class="detail-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
+                </svg>
+                <span>{supplier.phone}</span>
+              </div>
+            {/if}
+            {#if supplier.address}
+              <div class="detail-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span>{supplier.address}</span>
+              </div>
+            {/if}
+          </div>
+
+          <div class="supplier-actions">
+            <button class="action-btn" on:click={() => openModal(supplier)} title="Edit">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="action-btn danger" on:click={() => deleteSupplier(supplier.id)} title="Delete">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      {/each}
+    {/if}
+  </div>
 </div>
 
 {#if showModal}
-  <div class="modal-backdrop" on:click|self={closeModal}>
-    <div class="modal">
+  <div class="modal-overlay" on:click={closeModal}>
+    <div class="modal-content" on:click|stopPropagation>
       <div class="modal-header">
-        <h3 class="modal-title">{editing ? 'Edit Supplier' : 'Add Supplier'}</h3>
-        <button class="btn btn-ghost btn-icon" on:click={closeModal}>
-          <X size={18} />
+        <h2 class="modal-title">{editingSupplier ? 'Edit Supplier' : 'Add Supplier'}</h2>
+        <button class="modal-close" on:click={closeModal}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
         </button>
       </div>
-      <div class="modal-body">
-        <div class="flex flex-col gap-4">
+
+      <form on:submit|preventDefault={saveSupplier}>
+        <div class="form-group">
+          <label class="form-label">Company Name</label>
+          <input type="text" class="input-field" bind:value={form.name} required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Contact Person</label>
+          <input type="text" class="input-field" bind:value={form.contact_name} />
+        </div>
+
+        <div class="form-grid">
           <div class="form-group">
-            <label class="label" for="s-name">Company Name *</label>
-            <input id="s-name" class="input" bind:value={form.name} placeholder="e.g. TechTrade India Ltd." />
+            <label class="form-label">Email</label>
+            <input type="email" class="input-field" bind:value={form.email} />
           </div>
           <div class="form-group">
-            <label class="label" for="s-contact">Contact Person</label>
-            <input id="s-contact" class="input" bind:value={form.contact_name} placeholder="Full name" />
-          </div>
-          <div class="grid grid-2 grid-gap-4">
-            <div class="form-group">
-              <label class="label" for="s-email">Email</label>
-              <input id="s-email" class="input" type="email" bind:value={form.email} placeholder="supplier@example.com" />
-            </div>
-            <div class="form-group">
-              <label class="label" for="s-phone">Phone</label>
-              <input id="s-phone" class="input" bind:value={form.phone} placeholder="+91-9876543210" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="label" for="s-address">Street Address</label>
-            <textarea id="s-address" class="textarea input" rows="2" bind:value={form.address} placeholder="Street, Building…"></textarea>
-          </div>
-          <div class="form-group">
-            <label class="label" for="s-city">City / Location Assignment</label>
-            <div class="sel-wrap">
-              <select id="s-city" class="input" bind:value={form.city_id}>
-                <option value="">-- No city assigned (Hidden from Globe) --</option>
-                {#each allCities as city (city.id)}
-                  <option value={city.id}>{city.display}</option>
-                {/each}
-              </select>
-            </div>
-            <p class="form-hint">Assigning a city enables location-based reports and Globe View visualization.</p>
+            <label class="form-label">Phone</label>
+            <input type="tel" class="input-field" bind:value={form.phone} />
           </div>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" on:click={closeModal}>Cancel</button>
-        <button id="btn-save-supplier" class="btn btn-primary" on:click={save}>
-          {editing ? 'Save Changes' : 'Add Supplier'}
-        </button>
-      </div>
+
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <textarea class="input-field textarea" bind:value={form.address} rows="3"></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" on:click={closeModal}>Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            {editingSupplier ? 'Update Supplier' : 'Create Supplier'}
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 {/if}
 
 <style>
-  /* ── Page styles ── */
-  .link { color: var(--accent-cyan); text-decoration: none; transition: opacity 0.2s; }
-  .link:hover { opacity: 0.8; text-decoration: underline; }
-  .tr { text-align: right; }
-  .empty-state { text-align: center; color: var(--text-muted); padding: 4rem !important; }
+  .suppliers-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
 
-  /* ── Filter panel ── */
-  .filter-panel {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 14px; margin-bottom: var(--space-4); overflow: hidden;
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
   }
-  .filter-panel-inner { padding: var(--space-4) var(--space-5); }
-  .filter-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: var(--space-3);
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    min-width: 300px;
+    transition: all var(--transition-base);
   }
-  .filter-title {
-    display: flex; align-items: center; gap: 6px;
-    font-weight: 600; font-size: 0.9rem; color: var(--text-primary);
+
+  .search-box:focus-within {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
   }
-  .filter-row { display: flex; align-items: flex-end; gap: var(--space-2); flex-wrap: wrap; }
-  .filter-group { display: flex; flex-direction: column; gap: 6px; min-width: 160px; }
-  .filter-label {
-    font-size: 0.72rem; font-weight: 600; color: var(--text-muted);
-    text-transform: uppercase; letter-spacing: 0.06em;
+
+  .search-box svg {
+    color: var(--text-muted);
+    flex-shrink: 0;
   }
-  .sel-wrap { position: relative; }
-  .f-select {
+
+  .search-input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    outline: none;
+  }
+
+  .search-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .suppliers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+  }
+
+  .loading-state, .empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 64px 20px;
+    color: var(--text-muted);
+  }
+
+  .supplier-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    transition: all var(--transition-base);
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+  .supplier-card:hover {
+    border-color: var(--border-glow);
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-2px);
+  }
+
+  .supplier-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .supplier-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-primary), #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .supplier-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .supplier-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+
+  .contact-person {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .supplier-details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .detail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .detail-item svg {
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+
+  .supplier-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .action-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .action-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .action-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-danger);
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 1000;
+    padding: 40px 20px;
+    overflow-y: auto;
+  }
+
+  .modal-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 32px;
     width: 100%;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 10px; color: var(--text-primary);
-    padding: 8px 12px; font-size: 0.875rem;
-    cursor: pointer; outline: none; appearance: none;
-  }
-  .f-select:focus { border-color: var(--accent-glow); }
-  .loc-arrow { color: var(--text-muted); font-size: 1.4rem; align-self: flex-end; padding-bottom: 8px; }
-
-  .filter-btn {
-    display: flex; align-items: center; gap: 6px;
-    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
-    padding: 7px 14px; font-size: 0.85rem;
-  }
-  .filter-btn.active {
-    border-color: var(--accent-glow); color: var(--accent-glow);
-    background: rgba(139,92,246,0.1);
-  }
-  .chevron { transition: transform 0.2s; display: flex; align-items: center; }
-  .chevron.rotated { transform: rotate(180deg); }
-
-  /* ── Chips ── */
-  .chip {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 500;
-  }
-  .chip-region  { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
-  .chip-country { background: rgba(14,165,233,0.15); color: #38bdf8; border: 1px solid rgba(14,165,233,0.3); }
-  .chip-city    { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
-  .chip-arrow   { color: var(--text-muted); }
-  .chip-x { background: none; border: none; cursor: pointer; color: inherit; opacity: 0.7; }
-
-  /* ── Badges ── */
-  .count-badge {
-    display: inline-block; padding: 2px 10px; border-radius: 20px;
-    background: rgba(255,255,255,0.05); color: var(--text-primary);
-    font-size: 0.85rem; font-weight: 600; font-family: var(--font-mono);
+    max-width: 500px;
+    margin-top: 40px;
   }
 
-  .form-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
-  
-  .spinner {
-    width: 40px; height: 40px;
-    border: 3px solid var(--border-color);
-    border-top-color: var(--accent-primary);
-    border-radius: 50%; animation: spin 0.8s linear infinite;
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+
+  .modal-close {
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    transition: all var(--transition-fast);
+  }
+
+  .modal-close:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 28px;
+  }
+
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 150px;
+  }
+
+  .filter-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .filter-select {
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .filter-select:hover {
+    border-color: var(--accent-primary);
+  }
+
+  .filter-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+
+  .filter-stats {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .stat-item {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .stat-item strong {
+    color: var(--accent-primary);
+    font-weight: 700;
+  }
 </style>

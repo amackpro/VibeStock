@@ -1,39 +1,46 @@
-/**
- * toast.js — Global toast notification store
- *
- * Usage:
- *   import { toast } from '../stores/toast.js';
- *   toast.success('Product saved!');
- *   toast.error('API error: ' + err.message);
- */
 import { writable } from 'svelte/store';
 
-const { subscribe, update } = writable([]);
+function createToastStore() {
+  const { subscribe, update } = writable([]);
 
-let _id = 0;
-const timers = new Map(); // Track timeout IDs for cleanup
+  let id = 0;
 
-function add(message, type = 'success', duration = 3500) {
-  const id = ++_id;
-  update(list => [...list, { id, message, type }]);
-  const timerId = setTimeout(() => remove(id), duration);
-  timers.set(id, timerId);
+  return {
+    subscribe,
+    
+    show: (message, type = 'info', duration = 3000) => {
+      const toast = { id: ++id, message, type };
+      update(toasts => [...toasts, toast]);
+      
+      if (duration > 0) {
+        setTimeout(() => {
+          update(toasts => toasts.filter(t => t.id !== toast.id));
+        }, duration);
+      }
+      
+      return toast.id;
+    },
+
+    success: (message, duration) => {
+      return createToastStore().show(message, 'success', duration);
+    },
+
+    error: (message, duration) => {
+      return createToastStore().show(message, 'error', duration);
+    },
+
+    warning: (message, duration) => {
+      return createToastStore().show(message, 'warning', duration);
+    },
+
+    dismiss: (id) => {
+      update(toasts => toasts.filter(t => t.id !== id));
+    },
+
+    clear: () => {
+      update(() => []);
+    }
+  };
 }
 
-function remove(id) {
-  // Clear the timeout if it exists
-  const timerId = timers.get(id);
-  if (timerId !== undefined) {
-    clearTimeout(timerId);
-    timers.delete(id);
-  }
-  update(list => list.filter(t => t.id !== id));
-}
-
-export const toasts = { subscribe };
-
-export const toast = {
-  success: (msg) => add(msg, 'success'),
-  error:   (msg) => add(msg, 'error',   4500),
-  warning: (msg) => add(msg, 'warning', 4000),
-};
+export const toastStore = createToastStore();

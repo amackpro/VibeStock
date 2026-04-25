@@ -1,6 +1,6 @@
 {
-  "name": "vibestock-web",
-  "version": "0.1.0",
+  "name": "vibestock-web-pro",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,13 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@babylonjs/core": "^7.54.3",
-    "@babylonjs/gui": "^7.54.3",
-    "@babylonjs/loaders": "^7.54.3",
-    "@babylonjs/materials": "^7.54.3",
+    "gsap": "^3.12.5",
     "chart.js": "^4.4.2",
-    "globe.gl": "^2.45.1",
-    "lucide-svelte": "^0.577.0",
     "svelte-chartjs": "^3.1.5"
   },
   "devDependencies": {

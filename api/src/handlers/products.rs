@@ -18,74 +18,97 @@ pub async fn list_products(
     let offset  = params.offset();
     let page    = params.page.unwrap_or(1);
 
-    // Build WHERE clause with optional supplier filter
-    let where_clause = if params.supplier_id.is_some() {
-        "WHERE p.tenant_id = $1 AND p.is_active = true AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND p.supplier_id = $3"
-    } else {
-        "WHERE p.tenant_id = $1 AND p.is_active = true AND (p.name ILIKE $2 OR p.sku ILIKE $2)"
-    };
+    let mut conditions = vec![
+        "p.tenant_id = $1".to_string(),
+        "p.is_active = true".to_string(),
+        "(p.name ILIKE $2 OR p.sku ILIKE $2)".to_string(),
+    ];
+    let mut param_idx = 3;
 
-    let total: i64 = if let Some(supplier_id) = params.supplier_id {
-        sqlx::query_scalar(&format!("SELECT COUNT(*) FROM products p {}", where_clause))
-            .bind(tenant_id)
-            .bind(&search)
-            .bind(supplier_id)
-            .fetch_one(&state.db)
-            .await?
-    } else {
-        sqlx::query_scalar(&format!("SELECT COUNT(*) FROM products p {}", where_clause))
-            .bind(tenant_id)
-            .bind(&search)
-            .fetch_one(&state.db)
-            .await?
-    };
+    if params.supplier_id.is_some() {
+        conditions.push(format!("p.supplier_id = ${}", param_idx));
+        param_idx += 1;
+    }
 
-    let products = if let Some(supplier_id) = params.supplier_id {
-        sqlx::query_as::<_, ProductWithDetails>(&format!(
-            "SELECT p.id, p.tenant_id, p.name, p.description, p.sku, p.barcode,
-                    p.category_id, c.name AS category_name,
-                    p.supplier_id, s.name AS supplier_name,
-                    p.unit_price, p.cost_price,
-                    p.quantity_in_stock, p.reorder_level,
-                    p.unit_of_measure, p.is_active, p.image_url,
-                    p.created_at, p.updated_at
-             FROM products p
-             LEFT JOIN categories c ON c.id = p.category_id
-             LEFT JOIN suppliers  s ON s.id = p.supplier_id
-             {}
-             ORDER BY p.name ASC
-             LIMIT $4 OFFSET $5", where_clause
-        ))
-        .bind(tenant_id)
-        .bind(&search)
-        .bind(supplier_id)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&state.db)
-        .await?
-    } else {
-        sqlx::query_as::<_, ProductWithDetails>(&format!(
-            "SELECT p.id, p.tenant_id, p.name, p.description, p.sku, p.barcode,
-                    p.category_id, c.name AS category_name,
-                    p.supplier_id, s.name AS supplier_name,
-                    p.unit_price, p.cost_price,
-                    p.quantity_in_stock, p.reorder_level,
-                    p.unit_of_measure, p.is_active, p.image_url,
-                    p.created_at, p.updated_at
-             FROM products p
-             LEFT JOIN categories c ON c.id = p.category_id
-             LEFT JOIN suppliers  s ON s.id = p.supplier_id
-             {}
-             ORDER BY p.name ASC
-             LIMIT $3 OFFSET $4", where_clause
-        ))
-        .bind(tenant_id)
-        .bind(&search)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&state.db)
-        .await?
-    };
+    let mut joins = String::new();
+    if params.region.is_some() || params.country.is_some() {
+        joins.push_str(" LEFT JOIN cities ci ON s.city_id = ci.id");
+        joins.push_str(" LEFT JOIN countries co ON ci.country_id = co.id");
+        joins.push_str(" LEFT JOIN regions r ON co.region_id = r.id");
+    }
+
+    if let Some(ref region) = params.region {
+        if !region.is_empty() {
+            conditions.push(format!("r.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() {
+            conditions.push(format!("co.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() {
+            conditions.push(format!("c.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+
+    let where_clause = conditions.join(" AND ");
+
+    let count_sql = format!(
+        "SELECT COUNT(*) FROM products p 
+         LEFT JOIN categories c ON c.id = p.category_id 
+         LEFT JOIN suppliers s ON s.id = p.supplier_id 
+         {} WHERE {}",
+        joins, where_clause
+    );
+
+    let mut count_q = sqlx::query_scalar::<_, i64>(&count_sql).bind(tenant_id).bind(&search);
+    if let Some(sid) = params.supplier_id { count_q = count_q.bind(sid); }
+    if let Some(ref region) = params.region {
+        if !region.is_empty() { count_q = count_q.bind(format!("%{}%", region)); }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() { count_q = count_q.bind(format!("%{}%", country)); }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() { count_q = count_q.bind(format!("%{}%", cat)); }
+    }
+    let total: i64 = count_q.fetch_one(&state.db).await?;
+
+    let data_sql = format!(
+        "SELECT p.id, p.tenant_id, p.name, p.description, p.sku, p.barcode,
+                p.category_id, c.name AS category_name,
+                p.supplier_id, s.name AS supplier_name,
+                p.unit_price, p.cost_price,
+                p.quantity_in_stock, p.reorder_level,
+                p.unit_of_measure, p.is_active, p.image_url,
+                p.created_at, p.updated_at
+         FROM products p
+         LEFT JOIN categories c ON c.id = p.category_id
+         LEFT JOIN suppliers  s ON s.id = p.supplier_id
+         {}
+         WHERE {}
+         ORDER BY p.name ASC
+         LIMIT ${} OFFSET ${}",
+         joins, where_clause, param_idx, param_idx + 1
+    );
+
+    let mut data_q = sqlx::query_as::<_, ProductWithDetails>(&data_sql).bind(tenant_id).bind(&search);
+    if let Some(sid) = params.supplier_id { data_q = data_q.bind(sid); }
+    if let Some(ref region) = params.region {
+        if !region.is_empty() { data_q = data_q.bind(format!("%{}%", region)); }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() { data_q = data_q.bind(format!("%{}%", country)); }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() { data_q = data_q.bind(format!("%{}%", cat)); }
+    }
+    let products = data_q.bind(limit).bind(offset).fetch_all(&state.db).await?;
 
     Ok(Json(PaginatedResponse::new(products, total, page, limit)))
 }

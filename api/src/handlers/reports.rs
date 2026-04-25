@@ -22,6 +22,13 @@ pub struct ReportParams {
     pub date_from: Option<String>,
     #[serde(default)]
     pub date_to: Option<String>,
+    // Region/Country/Category filters for frontend
+    #[serde(default)]
+    pub region: Option<String>,
+    #[serde(default)]
+    pub country: Option<String>,
+    #[serde(default)]
+    pub category: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -112,8 +119,47 @@ pub async fn get_inventory_report(
         "p.tenant_id = $1".to_string(),
         "p.is_active = true".to_string(),
     ];
-    if params.category_id.is_some() { conditions.push("p.category_id = $2".to_string()); }
-    if params.city_id.is_some()     { conditions.push("s.city_id = $3".to_string()); }
+    let mut param_idx = 2;
+
+    if params.category_id.is_some() { 
+        conditions.push(format!("p.category_id = ${}", param_idx));
+        param_idx += 1;
+    }
+    if params.city_id.is_some() { 
+        conditions.push(format!("s.city_id = ${}", param_idx));
+        param_idx += 1;
+    }
+
+    // Add region/country/category text filters
+    let mut joins = String::new();
+    
+    if params.region.is_some() || params.country.is_some() {
+        joins.push_str(" LEFT JOIN cities ci ON s.city_id = ci.id");
+        joins.push_str(" LEFT JOIN countries co ON ci.country_id = co.id");
+        joins.push_str(" LEFT JOIN regions r ON co.region_id = r.id");
+    }
+    if params.category.is_some() || params.category_id.is_some() {
+        // categories already joined
+    }
+
+    if let Some(ref region) = params.region {
+        if !region.is_empty() {
+            conditions.push(format!("r.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() {
+            conditions.push(format!("co.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() {
+            conditions.push(format!("c.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
 
     let where_clause = conditions.join(" AND ");
     let sql = format!(
@@ -125,13 +171,24 @@ pub async fn get_inventory_report(
          FROM products p
          LEFT JOIN categories c ON p.category_id = c.id
          LEFT JOIN suppliers  s ON p.supplier_id  = s.id
-         WHERE {where_clause}
-         ORDER BY p.name"
+         {}
+         WHERE {}
+         ORDER BY p.name",
+        joins, where_clause
     );
 
     let mut q = sqlx::query_as::<_, ProductWithDetails>(&sql).bind(tenant_id);
     if let Some(cid) = params.category_id { q = q.bind(cid); }
-    if let Some(city) = params.city_id    { q = q.bind(city); }
+    if let Some(city) = params.city_id { q = q.bind(city); }
+    if let Some(ref region) = params.region {
+        if !region.is_empty() { q = q.bind(format!("%{}%", region)); }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() { q = q.bind(format!("%{}%", country)); }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() { q = q.bind(format!("%{}%", cat)); }
+    }
 
     let products: Vec<ProductWithDetails> = q.fetch_all(&state.db).await?;
 
@@ -163,8 +220,42 @@ pub async fn get_low_stock_report(
         "p.is_active = true".to_string(),
         "p.quantity_in_stock <= p.reorder_level".to_string(),
     ];
-    if params.category_id.is_some() { conditions.push("p.category_id = $2".to_string()); }
-    if params.city_id.is_some()     { conditions.push("s.city_id = $3".to_string()); }
+    let mut param_idx = 2;
+
+    if params.category_id.is_some() { 
+        conditions.push(format!("p.category_id = ${}", param_idx));
+        param_idx += 1;
+    }
+    if params.city_id.is_some() { 
+        conditions.push(format!("s.city_id = ${}", param_idx));
+        param_idx += 1;
+    }
+
+    let mut joins = String::new();
+    if params.region.is_some() || params.country.is_some() {
+        joins.push_str(" LEFT JOIN cities ci ON s.city_id = ci.id");
+        joins.push_str(" LEFT JOIN countries co ON ci.country_id = co.id");
+        joins.push_str(" LEFT JOIN regions r ON co.region_id = r.id");
+    }
+
+    if let Some(ref region) = params.region {
+        if !region.is_empty() {
+            conditions.push(format!("r.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() {
+            conditions.push(format!("co.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() {
+            conditions.push(format!("c.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
 
     let where_clause = conditions.join(" AND ");
     let sql = format!(
@@ -176,13 +267,24 @@ pub async fn get_low_stock_report(
          FROM products p
          LEFT JOIN categories c ON p.category_id = c.id
          LEFT JOIN suppliers  s ON p.supplier_id  = s.id
-         WHERE {where_clause}
-         ORDER BY p.quantity_in_stock ASC, p.name"
+         {}
+         WHERE {}
+         ORDER BY p.quantity_in_stock ASC, p.name",
+        joins, where_clause
     );
 
     let mut q = sqlx::query_as::<_, ProductWithDetails>(&sql).bind(tenant_id);
     if let Some(cid) = params.category_id { q = q.bind(cid); }
-    if let Some(city) = params.city_id    { q = q.bind(city); }
+    if let Some(city) = params.city_id { q = q.bind(city); }
+    if let Some(ref region) = params.region {
+        if !region.is_empty() { q = q.bind(format!("%{}%", region)); }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() { q = q.bind(format!("%{}%", country)); }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() { q = q.bind(format!("%{}%", cat)); }
+    }
 
     let products: Vec<ProductWithDetails> = q.fetch_all(&state.db).await?;
 
@@ -214,23 +316,64 @@ pub async fn get_movements_report(
         .or(params.end_date.as_deref())
         .unwrap_or("2099-12-31");
 
-    let movements: Vec<StockMovementWithDetails> = sqlx::query_as(
+    let mut conditions = vec![
+        "m.tenant_id = $1".to_string(),
+        format!("m.created_at >= $2::date"),
+        format!("m.created_at < ($3::date + interval '1 day')"),
+    ];
+    let mut param_idx = 4;
+
+    let mut joins = String::from("JOIN products p ON m.product_id = p.id\n         JOIN users u ON m.performed_by = u.id\n         LEFT JOIN categories c ON p.category_id = c.id\n         LEFT JOIN suppliers s ON p.supplier_id = s.id\n         LEFT JOIN cities ci ON s.city_id = ci.id\n         LEFT JOIN countries co ON ci.country_id = co.id\n         LEFT JOIN regions r ON co.region_id = r.id");
+
+    if let Some(ref region) = params.region {
+        if !region.is_empty() {
+            conditions.push(format!("r.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() {
+            conditions.push(format!("co.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() {
+            conditions.push(format!("c.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+
+    let where_clause = conditions.join(" AND ");
+    
+    let sql = format!(
         "SELECT m.id, m.tenant_id, m.product_id, p.name as product_name, p.sku as product_sku,
                 m.movement_type::text as movement_type, m.quantity, m.reference, m.notes,
                 m.performed_by, u.full_name as performed_by_name, m.created_at
          FROM stock_movements m
-         JOIN products p ON m.product_id = p.id
-         JOIN users    u ON m.performed_by = u.id
-         WHERE m.tenant_id = $1
-           AND m.created_at >= $2::date
-           AND m.created_at <  ($3::date + interval '1 day')
+         {}
+         WHERE {}
          ORDER BY m.created_at DESC
-         LIMIT 2000"
-    )
-    .bind(tenant_id)
-    .bind(date_from)
-    .bind(date_to)
-    .fetch_all(&state.db).await?;
+         LIMIT 2000",
+        joins, where_clause
+    );
+
+    let mut q = sqlx::query_as::<_, StockMovementWithDetails>(&sql)
+        .bind(tenant_id)
+        .bind(date_from)
+        .bind(date_to);
+    
+    if let Some(ref region) = params.region {
+        if !region.is_empty() { q = q.bind(format!("%{}%", region)); }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() { q = q.bind(format!("%{}%", country)); }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() { q = q.bind(format!("%{}%", cat)); }
+    }
+
+    let movements = q.fetch_all(&state.db).await?;
 
     let items: Vec<MovementReportItem> = movements.into_iter().map(|m| MovementReportItem {
         date: m.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
@@ -258,8 +401,42 @@ pub async fn get_valuation_report(
         "p.tenant_id = $1".to_string(),
         "p.is_active = true".to_string(),
     ];
-    if params.category_id.is_some() { conditions.push("p.category_id = $2".to_string()); }
-    if params.city_id.is_some()     { conditions.push("s.city_id = $3".to_string()); }
+    let mut param_idx = 2;
+
+    if params.category_id.is_some() { 
+        conditions.push(format!("p.category_id = ${}", param_idx));
+        param_idx += 1;
+    }
+    if params.city_id.is_some() { 
+        conditions.push(format!("s.city_id = ${}", param_idx));
+        param_idx += 1;
+    }
+
+    let mut joins = String::new();
+    if params.region.is_some() || params.country.is_some() {
+        joins.push_str(" LEFT JOIN cities ci ON s.city_id = ci.id");
+        joins.push_str(" LEFT JOIN countries co ON ci.country_id = co.id");
+        joins.push_str(" LEFT JOIN regions r ON co.region_id = r.id");
+    }
+
+    if let Some(ref region) = params.region {
+        if !region.is_empty() {
+            conditions.push(format!("r.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() {
+            conditions.push(format!("co.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() {
+            conditions.push(format!("c.name ILIKE ${}", param_idx));
+            param_idx += 1;
+        }
+    }
 
     let where_clause = conditions.join(" AND ");
     let sql = format!(
@@ -270,14 +447,25 @@ pub async fn get_valuation_report(
          FROM products p
          LEFT JOIN categories c ON p.category_id = c.id
          LEFT JOIN suppliers  s ON p.supplier_id  = s.id
-         WHERE {where_clause}
+         {}
+         WHERE {}
          GROUP BY c.name
-         ORDER BY total_retail_value DESC"
+         ORDER BY total_retail_value DESC",
+        joins, where_clause
     );
 
     let mut q = sqlx::query_as::<_, (Option<String>, i64, f64, f64)>(&sql).bind(tenant_id);
     if let Some(cid) = params.category_id { q = q.bind(cid); }
-    if let Some(city) = params.city_id    { q = q.bind(city); }
+    if let Some(city) = params.city_id { q = q.bind(city); }
+    if let Some(ref region) = params.region {
+        if !region.is_empty() { q = q.bind(format!("%{}%", region)); }
+    }
+    if let Some(ref country) = params.country {
+        if !country.is_empty() { q = q.bind(format!("%{}%", country)); }
+    }
+    if let Some(ref cat) = params.category {
+        if !cat.is_empty() { q = q.bind(format!("%{}%", cat)); }
+    }
 
     let items: Vec<(Option<String>, i64, f64, f64)> = q.fetch_all(&state.db).await?;
 

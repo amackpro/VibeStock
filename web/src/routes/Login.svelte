@@ -1,281 +1,466 @@
 <script>
-  /**
-   * Login.svelte — Authentication page
-   * Calls the Axum API, stores JWT in auth store on success.
-   */
-  import { api }       from '../lib/api.js';
+  import { onMount } from 'svelte';
+  import { gsap } from 'gsap';
+  import { api, checkConnection } from '../lib/api.js';
   import { authStore } from '../stores/auth.js';
-  import { toast }     from '../stores/toast.js';
-  import { themeStore } from '../stores/theme.js';
-  import { Zap, Sun, Moon } from 'lucide-svelte';
+  import { navigate } from '../stores/router.js';
+  import { toastStore } from '../stores/toast.js';
 
-  let isRegisterMode = false;
   let username = '';
   let password = '';
-  let email = '';
-  let full_name = '';
-  let loading  = false;
-  let error    = '';
+  let loading = false;
+  let error = '';
+  let serverConnected = true;
 
-  async function handleSubmit() {
-    if (isRegisterMode) {
-      if (!username || !password || !email || !full_name) { error = 'Please fill in all fields.'; return; }
-      loading = true; error = '';
-      try {
-        await api.auth.register({ username, password, email, full_name });
-        toast.success("Account created successfully! Please log in.");
-        isRegisterMode = false;
-        password = ''; // clear password on switch
-      } catch (e) {
-        error = e.message ?? 'Registration failed.';
-      } finally {
-        loading = false;
-      }
-    } else {
-      if (!username || !password) { error = 'Please fill in all fields.'; return; }
-      loading = true; error = '';
-      try {
-        const resp = await api.auth.login({ username, password });
-        authStore.login(resp);
-      } catch (e) {
-        error = e.message ?? 'Login failed. Please try again.';
-      } finally {
-        loading = false;
-      }
+  let container, logoRef, formRef, bgOrbs;
+
+  onMount(async () => {
+    serverConnected = await checkConnection();
+    if (!serverConnected) {
+      error = 'Cannot connect to server. Please ensure the API is running on port 3000.';
+      gsap.fromTo('.error-message', 
+        { x: -10, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.3 }
+      );
+    }
+
+    const tl = gsap.timeline();
+
+    tl.fromTo('.login-bg-orb', 
+      { scale: 0, opacity: 0 },
+      { scale: 1, opacity: 0.6, duration: 1.5, stagger: 0.2, ease: 'power2.out' }
+    );
+
+    tl.fromTo(logoRef, 
+      { y: -50, opacity: 0, scale: 0.8 },
+      { y: 0, opacity: 1, scale: 1, duration: 0.8, ease: 'back.out(1.7)' },
+      '-=0.5'
+    );
+
+    tl.fromTo('.login-title', 
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.6 },
+      '-=0.4'
+    );
+
+    tl.fromTo('.login-subtitle', 
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.6 },
+      '-=0.4'
+    );
+
+    tl.fromTo('.login-form', 
+      { y: 40, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' },
+      '-=0.3'
+    );
+
+    tl.fromTo('.input-group', 
+      { x: -30, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.5, stagger: 0.1 },
+      '-=0.4'
+    );
+
+    tl.fromTo('.login-btn', 
+      { y: 20, opacity: 0, scale: 0.9 },
+      { y: 0, opacity: 1, scale: 1, duration: 0.5 },
+      '-=0.2'
+    );
+
+    tl.fromTo('.demo-credentials', 
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5 },
+      '-=0.2'
+    );
+  });
+
+  async function handleLogin() {
+    if (!username || !password) {
+      error = 'Please enter username and password';
+      return;
+    }
+
+    loading = true;
+    error = '';
+
+    try {
+      const response = await api.auth.login({ username, password });
+      const user = {
+        id: response.user_id,
+        username: response.username,
+        full_name: response.full_name,
+        role: response.role,
+        is_global_admin: response.is_global_admin
+      };
+      const tenant = response.accessible_tenants?.length > 0 
+        ? response.accessible_tenants[0] 
+        : { id: response.tenant_id, name: response.tenant_name };
+      await authStore.login(response.token, user, tenant);
+      toastStore.show('Welcome back!', 'success');
+      navigate('/dashboard');
+    } catch (e) {
+      error = e.message || 'Login failed';
+      gsap.fromTo('.error-message', 
+        { x: -10, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.3 }
+      );
+    } finally {
+      loading = false;
     }
   }
 
-  function toggleMode() {
-    isRegisterMode = !isRegisterMode;
-    error = '';
+  function handleKeydown(e) {
+    if (e.key === 'Enter') handleLogin();
   }
-
-  function onKey(e) { if (e.key === 'Enter') handleSubmit(); }
 </script>
 
-<!-- Full-screen login with animated gradient mesh background -->
-<div class="login-screen">
-  <!-- Theme Toggle -->
-  <button class="theme-toggle top-right" on:click={themeStore.toggle} title="Toggle Dark/Light Mode">
-    {#if $themeStore === 'dark'}
-      <Sun size={20} />
-    {:else}
-      <Moon size={20} />
-    {/if}
-  </button>
+<div class="login-page" bind:this={container}>
+  <div class="login-background">
+    <div class="login-bg-orb orb-1"></div>
+    <div class="login-bg-orb orb-2"></div>
+    <div class="login-bg-orb orb-3"></div>
+    <div class="login-grid"></div>
+  </div>
 
-  <!-- Decorative blobs -->
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
-
-  <div class="login-card card stagger-row">
-    <!-- Logo -->
-    <div class="login-logo stagger-row">
-      <div class="logo-icon">
-        <Zap size={28} />
+  <div class="login-container">
+    <div class="login-header">
+      <div class="logo" bind:this={logoRef}>
+        <div class="logo-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" fill="url(#gradLogin)"/>
+            <path d="M2 17l10 5 10-5" stroke="url(#gradLogin)" stroke-width="2"/>
+            <path d="M2 12l10 5 10-5" stroke="url(#gradLogin)" stroke-width="2"/>
+            <defs>
+              <linearGradient id="gradLogin" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#6366f1"/>
+                <stop offset="100%" style="stop-color:#22d3ee"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="logo-text">VibeStock</span>
       </div>
-      <h1 class="logo-title">VibeStock</h1>
-      <p class="logo-sub">Inventory Management System</p>
+      
+      <h1 class="login-title">Welcome back</h1>
+      <p class="login-subtitle">Sign in to manage your inventory</p>
     </div>
 
-    <!-- Form -->
-    <form class="login-form" on:submit|preventDefault={handleSubmit}>
-      <div class="form-group stagger-row">
-        <label class="label" for="username">Username</label>
-        <input
-          id="username"
-          class="input"
-          type="text"
-          placeholder="admin"
-          bind:value={username}
-          on:keydown={onKey}
-          autocomplete="username"
-          disabled={loading}
-        />
+    <form class="login-form" bind:this={formRef} on:submit|preventDefault={handleLogin}>
+      <div class="input-group">
+        <label class="input-label" for="username">Username</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </span>
+          <input 
+            type="text" 
+            id="username"
+            class="input-field" 
+            placeholder="Enter your username"
+            bind:value={username}
+            on:keydown={handleKeydown}
+          />
+        </div>
       </div>
 
-      {#if isRegisterMode}
-        <div class="form-group slide-down stagger-row">
-          <label class="label" for="full_name">Full Name</label>
-          <input
-            id="full_name"
-            class="input"
-            type="text"
-            placeholder="John Doe"
-            bind:value={full_name}
-            on:keydown={onKey}
-            autocomplete="name"
-            disabled={loading}
+      <div class="input-group">
+        <label class="input-label" for="password">Password</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+          </span>
+          <input 
+            type="password" 
+            id="password"
+            class="input-field" 
+            placeholder="Enter your password"
+            bind:value={password}
+            on:keydown={handleKeydown}
           />
         </div>
-
-        <div class="form-group slide-down stagger-row">
-          <label class="label" for="email">Email</label>
-          <input
-            id="email"
-            class="input"
-            type="email"
-            placeholder="john@example.com"
-            bind:value={email}
-            on:keydown={onKey}
-            autocomplete="email"
-            disabled={loading}
-          />
-        </div>
-      {/if}
-
-      <div class="form-group stagger-row">
-        <label class="label" for="password">Password</label>
-        <input
-          id="password"
-          class="input"
-          type="password"
-          placeholder="••••••••••"
-          bind:value={password}
-          on:keydown={onKey}
-          autocomplete="current-password"
-          disabled={loading}
-        />
       </div>
 
       {#if error}
-        <div class="error-msg">❌ {error}</div>
+        <div class="error-message">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v4M12 16h.01"/>
+          </svg>
+          <span>{error}</span>
+        </div>
       {/if}
 
-      <button
-        class="btn btn-primary login-btn"
-        type="submit"
-        disabled={loading}
-        id="btn-login"
-      >
+      <button type="submit" class="login-btn" disabled={loading || !serverConnected}>
         {#if loading}
-          <div class="spinner" style="width:16px;height:16px;border-width:2px;"></div>
-          {isRegisterMode ? 'Creating...' : 'Signing in…'}
+          <span class="spinner"></span>
+          Signing in...
+        {:else if !serverConnected}
+          Server Unavailable
         {:else}
-          {isRegisterMode ? 'Create Account' : 'Sign In →'}
+          Sign in
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
         {/if}
       </button>
-
-      <div class="toggle-mode">
-        {#if isRegisterMode}
-          Already have an account? <button type="button" class="link-btn" on:click={toggleMode}>Sign in</button>
-        {:else}
-          Need an account? <button type="button" class="link-btn" on:click={toggleMode}>Register</button>
-        {/if}
-      </div>
     </form>
 
-    {#if !isRegisterMode}
-      <p class="demo-hint">Demo: <code>admin</code> / <code>Password@123</code></p>
-    {/if}
+    <div class="demo-credentials">
+      <span class="demo-label">Demo credentials</span>
+      <code>admin / Password@123</code>
+    </div>
   </div>
 </div>
 
 <style>
-  .login-screen {
-    width: 100%; height: 100%;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--bg-base);
-    position: relative; overflow: hidden;
+  .login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-primary);
+    position: relative;
+    overflow: hidden;
   }
 
-  .theme-toggle.top-right {
-    position: absolute; top: var(--space-6); right: var(--space-6); z-index: 10;
-    background: var(--glass-card); border: 1px solid var(--border-glass);
-    cursor: pointer; font-size: 1.5rem; padding: var(--space-2);
-    border-radius: var(--radius-full); box-shadow: var(--shadow-sm);
-    color: var(--text-secondary); transition: all var(--transition-fast);
-  }
-  .theme-toggle.top-right:hover {
-    color: var(--text-primary); transform: scale(1.1); background: var(--glass-hover);
+  .login-background {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
   }
 
-  /* Animated ethereal background blobs - Toned Down & GPU Optimized */
-  .blob {
-    position: absolute; border-radius: 50%;
-    opacity: 0.15; pointer-events: none;
-    animation: moveBlob 30s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .blob-1 { 
-    width: 60vw; height: 60vw; 
-    background: radial-gradient(circle, var(--accent-primary) 0%, transparent 60%); 
-    top: -20%; left: -10%; 
-  }
-  .blob-2 { 
-    width: 50vw; height: 50vw; 
-    background: radial-gradient(circle, var(--accent-cyan) 0%, transparent 60%); 
-    bottom: -10%; right: -10%; 
-    animation-direction: alternate-reverse; animation-duration: 35s; 
-  }
-  @keyframes moveBlob {
-    0% { transform: translate(0, 0) scale(1); }
-    100% { transform: translate(10vw, 15vh) scale(1.1); }
+  .login-bg-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
   }
 
-  .login-card {
-    width: 420px; max-width: 95vw;
-    padding: var(--space-8) var(--space-10);
-    position: relative; z-index: 1;
-    display: flex; flex-direction: column; gap: var(--space-6);
-    background: var(--glass-card);
-    border: 1px solid var(--border-glass);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-md);
+  .orb-1 {
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.3), transparent 70%);
+    top: -200px;
+    right: -100px;
   }
 
-  .login-logo { text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+  .orb-2 {
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.2), transparent 70%);
+    bottom: -150px;
+    left: -100px;
+  }
+
+  .orb-3 {
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.2), transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .login-grid {
+    position: absolute;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .login-container {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .login-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
   .logo-icon {
-    width: 64px; height: 64px; border-radius: var(--radius-xl);
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 2rem; color: white;
-    box-shadow: 0 12px 32px rgba(139,92,246,0.4), inset 0 2px 0 rgba(255,255,255,0.3);
-    animation: float 6s ease-in-out infinite;
-  }
-  .logo-title { font-size: 2rem; font-weight: 800; margin-top: var(--space-2); letter-spacing: -0.04em; color: var(--text-primary); }
-  .logo-sub   { color: var(--text-secondary); font-size: 0.9375rem; letter-spacing: 0.05em; text-transform: uppercase; }
-
-  .login-form  { display: flex; flex-direction: column; gap: var(--space-5); }
-  .login-btn   { width: 100%; justify-content: center; padding: 12px; font-size: 1.05rem; margin-top: var(--space-2); }
-  .login-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
-
-  .error-msg {
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.25);
-    border-radius: var(--radius-md);
-    padding: var(--space-2) var(--space-3);
-    font-size: 0.8125rem; color: var(--accent-red);
+    display: flex;
   }
 
-  .demo-hint {
-    text-align: center; font-size: 0.75rem; color: var(--text-muted);
-    padding-top: var(--space-2);
+  .logo-text {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
-  code {
-    font-family: var(--font-mono);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-surface);
-    padding: 1px 4px; border-radius: 4px;
-    color: var(--accent-cyan);
+
+  .login-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+
+  .login-subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+  }
+
+  .login-form {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 32px;
+    backdrop-filter: blur(20px);
+  }
+
+  .input-group {
+    margin-bottom: 24px;
+  }
+
+  .input-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
     font-weight: 600;
+    color: var(--text-secondary);
   }
 
-  .toggle-mode {
-    text-align: center; font-size: 0.8125rem; color: var(--text-secondary);
-    margin-top: var(--space-2);
+  .input-wrapper {
+    position: relative;
   }
-  .link-btn {
-    background: none; border: none; cursor: pointer; color: var(--accent-cyan);
-    font-weight: 600; font-size: 0.8125rem; padding: 0;
-  }
-  .link-btn:hover { text-decoration: underline; color: var(--accent-primary); }
 
-  .slide-down {
-    animation: slideDown 0.3s ease forwards;
-    transform-origin: top;
+  .input-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    display: flex;
+    transition: color var(--transition-fast);
   }
-  @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+
+  .input-field {
+    width: 100%;
+    padding: 14px 16px 14px 48px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all var(--transition-base);
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+
+  .input-field:focus + .input-icon,
+  .input-field:focus ~ .input-icon {
+    color: var(--accent-primary);
+  }
+
+  .input-field::placeholder {
+    color: var(--text-muted);
+  }
+
+  .error-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius-md);
+    color: var(--accent-danger);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+
+  .login-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, var(--accent-primary), #8b5cf6);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+  }
+
+  .login-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4);
+  }
+
+  .login-btn:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .login-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .demo-credentials {
+    margin-top: 24px;
+    text-align: center;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+  }
+
+  .demo-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .demo-credentials code {
+    font-family: 'DM Sans', monospace;
+    color: var(--accent-secondary);
+    font-size: 0.9rem;
   }
 </style>

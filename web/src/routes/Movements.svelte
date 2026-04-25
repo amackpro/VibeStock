@@ -1,219 +1,504 @@
 <script>
-  /**
-   * Movements.svelte — Stock movements history & new movement entry
-   *
-   * Lets staff record IN / OUT / ADJUSTMENT / RETURN movements.
-   * Shows a paginated audit log with color-coded movement type badges.
-   */
   import { onMount } from 'svelte';
-  import { api }   from '../lib/api.js';
-  import { toast } from '../stores/toast.js';
-  import { X, Package, Truck, Wrench, Undo2 } from 'lucide-svelte';
+  import { gsap } from 'gsap';
+  import { api } from '../lib/api.js';
+  import { toastStore } from '../stores/toast.js';
 
-  let movements  = [];
-  let products   = [];
-  let total      = 0;
-  let page       = 1;
-  let loading    = false;
-  let showModal  = false;
+  let movements = [];
+  let products = [];
+  let loading = true;
+  let showModal = false;
+  
+  let form = {
+    product_id: '',
+    movement_type: 'in',
+    quantity: 1,
+    notes: ''
+  };
 
-  // New movement form
-  let form = { product_id: '', movement_type: 'in', quantity: 1, reference: '', notes: '' };
+  onMount(async () => {
+    await Promise.all([loadMovements(), loadProducts()]);
+    animateEntrance();
+  });
 
-  // ── Data loading ─────────────────────────────────────────────────────────────
-  async function load() {
-    loading = true;
+  function animateEntrance() {
+    const tl = gsap.timeline();
+
+    tl.fromTo('.page-header', 
+      { y: -20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }
+    );
+
+    tl.fromTo('.table-container', 
+      { y: 30, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' },
+      '-=0.3'
+    );
+  }
+
+  async function loadMovements() {
     try {
-      const r = await api.movements.list({ page, per_page: 15 });
-      movements = r.data ?? [];
-      total     = r.total ?? 0;
-    } catch (e) { toast.error(e.message); }
-    finally { loading = false; }
+      const result = await api.movements.list();
+      movements = result.data || result;
+    } catch (e) {
+      toastStore.show('Failed to load movements', 'error');
+    } finally {
+      loading = false;
+    }
   }
 
   async function loadProducts() {
-    try { const r = await api.products.list({ per_page: 100 }); products = r.data ?? []; }
-    catch {}
-  }
-
-  onMount(() => { load(); loadProducts(); });
-
-  // ── Modal ────────────────────────────────────────────────────────────────────
-  function openModal()  { form = { product_id: '', movement_type: 'in', quantity: 1, reference: '', notes: '' }; showModal = true; }
-  function closeModal() { showModal = false; }
-
-  async function saveMovement() {
-    if (!form.product_id) { toast.warning('Please select a product'); return; }
     try {
-      const r = await api.movements.create({
-        product_id:    form.product_id,
-        movement_type: form.movement_type,
-        quantity:      parseInt(form.quantity),
-        reference:     form.reference || null,
-        notes:         form.notes || null,
-      });
-      toast.success(`✅ Stock updated. New quantity: ${r.new_quantity}`);
-      closeModal();
-      load();
-      window.dispatchEvent(new CustomEvent('stock-updated'));  // triggers dashboard refresh
-    } catch (e) { toast.error(e.message); }
+      products = await api.products.list();
+    } catch (e) {
+      console.error('Failed to load products', e);
+    }
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
-  const movBadgeClass = { in: 'badge-green', out: 'badge-red', adjustment: 'badge-amber', return: 'badge-cyan' };
-  const movEmoji      = { in: '[IN]', out: '[OUT]', adjustment: '[ADJ]', return: '[RET]' };
+  function openModal() {
+    form = {
+      product_id: '',
+      movement_type: 'IN',
+      quantity: 1,
+      notes: ''
+    };
+    
+    gsap.fromTo('.modal-content', 
+      { scale: 0.9, opacity: 0, y: 20 },
+      { scale: 1, opacity: 1, y: 0, duration: 0.3, ease: 'back.out(1.5)' }
+    );
+    
+    showModal = true;
+  }
 
-  function fmtDate(dt) {
-    return new Date(dt).toLocaleString('en-IN', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
+  function closeModal() {
+    gsap.to('.modal-content', {
+      scale: 0.9,
+      opacity: 0,
+      duration: 0.2,
+      onComplete: () => {
+        showModal = false;
+      }
     });
   }
 
-  $: totalPages = Math.ceil(total / 15);
+  async function createMovement() {
+    try {
+      await api.movements.create(form);
+      toastStore.show('Movement recorded successfully', 'success');
+      await loadMovements();
+      closeModal();
+    } catch (e) {
+      toastStore.show(e.message, 'error');
+    }
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
 </script>
 
-<div class="page">
+<div class="movements-page">
   <div class="page-header">
-    <div class="page-title-group">
-      <h1 class="page-title">Stock Movements</h1>
-      <p class="page-subtitle">{total} movements recorded — immutable audit log</p>
-    </div>
-    <button id="btn-new-movement" class="btn btn-primary" on:click={openModal}>+ Record Movement</button>
+    <h2 class="page-title">Stock Movements</h2>
+    <button class="btn btn-primary" on:click={openModal}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      New Movement
+    </button>
   </div>
 
-  <!-- ── Legend ────────────────────────────────────────────────────────────── -->
-  <div class="flex gap-3">
-    {#each ['in','out','adjustment','return'] as t}
-      <span class="badge {movBadgeClass[t]}">{movEmoji[t]} {t}</span>
-    {/each}
-  </div>
-
-  <!-- ── Table ─────────────────────────────────────────────────────────────── -->
-  <div class="card stagger-row" style="padding:0;overflow:hidden;flex:1;animation-delay: 50ms">
-    {#if loading}
-      <div style="display:flex;justify-content:center;padding:4rem"><div class="spinner" style="width:32px;height:32px;border-width:3px"></div></div>
-    {:else}
-      <div class="table-wrapper" style="border-radius:0;border:none;max-height:calc(100vh - 290px)">
-        <table>
-          <thead>
-            <tr>
-              <th>Date &amp; Time</th>
-              <th>Product</th>
-              <th>Type</th>
-              <th>Quantity</th>
-              <th>Reference</th>
-              <th>Notes</th>
-              <th>Performed By</th>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Product</th>
+          <th>Type</th>
+          <th>Quantity</th>
+          <th>Notes</th>
+          <th>User</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#if loading}
+          <tr>
+            <td colspan="6" class="loading-cell">
+              <div class="spinner"></div>
+              Loading movements...
+            </td>
+          </tr>
+        {:else if movements.length === 0}
+          <tr>
+            <td colspan="6" class="empty-cell">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+              </svg>
+              <span>No movements recorded</span>
+            </td>
+          </tr>
+        {:else}
+          {#each movements as movement, i (movement.id)}
+            <tr class="movement-row" style="animation-delay: {i * 0.03}s">
+              <td class="date-cell">
+                <span class="date">{formatDate(movement.created_at)}</span>
+              </td>
+              <td>
+                <div class="product-cell">
+                  <span class="product-name">{movement.product_name || 'Unknown'}</span>
+                  <span class="product-sku">{movement.product_sku || ''}</span>
+                </div>
+              </td>
+              <td>
+                <span class="type-badge type-{movement.movement_type.toLowerCase()}">
+                  {#if movement.movement_type === 'in'}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <path d="M12 19V5M5 12l7-7 7 7"/>
+                    </svg>
+                  {:else if movement.movement_type === 'out'}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <path d="M12 5v14M5 12l7 7 7-7"/>
+                    </svg>
+                  {:else}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  {/if}
+                  {movement.movement_type}
+                </span>
+              </td>
+              <td>
+                <span class="quantity" class:positive={movement.movement_type === 'in'} class:negative={movement.movement_type === 'out'}>
+                  {movement.movement_type === 'in' ? '+' : movement.movement_type === 'out' ? '-' : ''}{movement.quantity}
+                </span>
+              </td>
+              <td>
+                <span class="notes">{movement.notes || '-'}</span>
+              </td>
+              <td>
+                <span class="user">{movement.performed_by_name || '-'}</span>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {#each movements as m, i (m.id)}
-              <tr class="stagger-row" style="animation-delay: {100 + (i * 50)}ms">
-                <td style="font-size:0.8125rem;color:var(--text-muted);white-space:nowrap">{fmtDate(m.created_at)}</td>
-                <td>
-                  <div style="font-weight:600">{m.product_name}</div>
-                  <div style="font-size:0.75rem;font-family:var(--font-mono);color:var(--text-muted)">{m.product_sku}</div>
-                </td>
-                <td><span class="badge {movBadgeClass[m.movement_type]}">{movEmoji[m.movement_type]} {m.movement_type}</span></td>
-                <td style="font-family:var(--font-mono);font-weight:700;font-size:1rem">{m.quantity}</td>
-                <td style="color:var(--text-secondary);font-size:0.8125rem">{m.reference ?? '—'}</td>
-                <td style="color:var(--text-muted);font-size:0.8125rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{m.notes ?? '—'}</td>
-                <td style="color:var(--text-secondary);font-size:0.8125rem">{m.performed_by_name}</td>
-              </tr>
-            {/each}
-            {#if movements.length === 0}
-              <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:3rem">No movements recorded yet</td></tr>
-            {/if}
-          </tbody>
-        </table>
-      </div>
-
-      {#if totalPages > 1}
-        <div class="pagination" style="padding-bottom:var(--space-4)">
-          <button class="page-btn" on:click={() => { page--; load(); }} disabled={page===1}>‹</button>
-          {#each Array(Math.min(totalPages,7)) as _,i}
-            {@const pg = i+1}
-            <button class="page-btn" class:active={pg===page} on:click={() => { page=pg; load(); }}>{pg}</button>
           {/each}
-          <button class="page-btn" on:click={() => { page++; load(); }} disabled={page>=totalPages}>›</button>
-        </div>
-      {/if}
-    {/if}
+        {/if}
+      </tbody>
+    </table>
   </div>
 </div>
 
-<!-- ── New Movement Modal ──────────────────────────────────────────────────── -->
 {#if showModal}
-  <div class="modal-backdrop" on:click|self={closeModal}>
-    <div class="modal">
+  <div class="modal-overlay" on:click={closeModal}>
+    <div class="modal-content" on:click|stopPropagation>
       <div class="modal-header">
-        <h3>Record Stock Movement</h3>
-        <button class="btn btn-ghost btn-icon" on:click={closeModal}>
-          <X size={18} />
+        <h2 class="modal-title">Record Movement</h2>
+        <button class="modal-close" on:click={closeModal}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
         </button>
       </div>
-      <div class="modal-body">
-        <div class="flex flex-col gap-4">
-          <div class="form-group">
-            <label class="label" for="mv-product">Product *</label>
-            <select id="mv-product" class="select input" bind:value={form.product_id}>
-              <option value="">— Select product —</option>
-              {#each products as p}<option value={p.id}>[{p.sku}] {p.name} (stock: {p.quantity_in_stock})</option>{/each}
-            </select>
-          </div>
-          <div class="grid grid-2 grid-gap-4">
-            <div class="form-group">
-              <label class="label" for="mv-type">Movement Type *</label>
-              <select id="mv-type" class="select input" bind:value={form.movement_type}>
-                <option value="in">Stock In (received)</option>
-                <option value="out">Stock Out (dispatched)</option>
-                <option value="adjustment">Adjustment (audit/damage)</option>
-                <option value="return">Return (customer/supplier)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="label" for="mv-qty">Quantity *</label>
-              <input id="mv-qty" class="input" type="number" min="1" bind:value={form.quantity} />
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="label" for="mv-ref">Reference (PO / Invoice / Order No.)</label>
-            <input id="mv-ref" class="input" bind:value={form.reference} placeholder="e.g. PO-2024-001" />
-          </div>
-          <div class="form-group">
-            <label class="label" for="mv-notes">Notes</label>
-            <textarea id="mv-notes" class="textarea input" rows="2" bind:value={form.notes} placeholder="Optional notes about this movement…"></textarea>
-          </div>
-          <!-- Movement type hint -->
-          <div class="hint-box">
-            {#if form.movement_type === 'in'}
-              <p><Package size={14} /> Stock will be <strong>added</strong> to the current quantity.</p>
-            {:else if form.movement_type === 'out'}
-              <p><Truck size={14} /> Stock will be <strong>deducted</strong>. Fails if insufficient.</p>
-            {:else if form.movement_type === 'adjustment'}
-              <p><Wrench size={14} /> Sets quantity to the value entered (audit correction).</p>
-            {:else if form.movement_type === 'return'}
-              <p><Undo2 size={14} /> Returned stock will be <strong>added</strong> back to inventory.</p>
-            {/if}
+
+      <form on:submit|preventDefault={createMovement}>
+        <div class="form-group">
+          <label class="form-label">Product</label>
+          <select class="input-field" bind:value={form.product_id} required>
+            <option value="">Select product</option>
+            {#each products as prod}
+              <option value={prod.id}>{prod.name} ({prod.sku})</option>
+            {/each}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Movement Type</label>
+          <div class="type-selector">
+            <button type="button" class="type-btn" class:active={form.movement_type === 'in'} on:click={() => form.movement_type = 'in'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 19V5M5 12l7-7 7 7"/>
+              </svg>
+              Stock In
+            </button>
+            <button type="button" class="type-btn" class:active={form.movement_type === 'out'} on:click={() => form.movement_type = 'out'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+              </svg>
+              Stock Out
+            </button>
+            <button type="button" class="type-btn" class:active={form.movement_type === 'adjustment'} on:click={() => form.movement_type = 'adjustment'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Adjustment
+            </button>
           </div>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" on:click={closeModal}>Cancel</button>
-        <button id="btn-save-movement" class="btn btn-primary" on:click={saveMovement}>Record Movement</button>
-      </div>
+
+        <div class="form-group">
+          <label class="form-label">Quantity</label>
+          <input type="number" class="input-field" bind:value={form.quantity} min="1" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea class="input-field textarea" bind:value={form.notes} rows="3" placeholder="Reason for movement..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" on:click={closeModal}>Cancel</button>
+          <button type="submit" class="btn btn-primary">Record Movement</button>
+        </div>
+      </form>
     </div>
   </div>
 {/if}
 
 <style>
-  .hint-box {
-    background: rgba(124,58,237,0.08);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    padding: var(--space-3) var(--space-4);
-    font-size: 0.8125rem; color: var(--text-secondary);
+  .movements-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
   }
-  .hint-box strong { color: var(--text-primary); }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .page-title {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+
+  .table-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  th {
+    padding: 16px 20px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+  }
+
+  td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .loading-cell, .empty-cell {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .date-cell .date {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .product-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .product-cell .product-name {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .product-cell .product-sku {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .type-badge.type-in {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent-success);
+  }
+
+  .type-badge.type-out {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--accent-danger);
+  }
+
+  .type-badge.type-adjustment {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent-primary);
+  }
+
+  .quantity {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .quantity.positive {
+    color: var(--accent-success);
+  }
+
+  .quantity.negative {
+    color: var(--accent-danger);
+  }
+
+  .notes {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  .user {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .movement-row {
+    animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+  }
+
+  .modal-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 32px;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+
+  .modal-close {
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+  }
+
+  .modal-close:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .type-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .type-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all var(--transition-base);
+  }
+
+  .type-btn:hover {
+    border-color: var(--accent-primary);
+  }
+
+  .type-btn.active {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+
+  .textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 28px;
+  }
 </style>

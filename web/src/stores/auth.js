@@ -1,71 +1,55 @@
-/**
- * auth.js — Authentication Svelte Store
- *
- * Persists login state (token + user info) in localStorage so the
- * session survives app restarts within the Tauri window.
- */
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 
 const STORAGE_KEY = 'vibestock_auth';
 
-function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { token: null, user: null, tenant: null, accessibleTenants: [] };
-  } catch {
-    return { token: null, user: null, tenant: null, accessibleTenants: [] };
-  }
-}
-
 function createAuthStore() {
-  const { subscribe, set, update } = writable(loadFromStorage());
+  const stored = typeof localStorage !== 'undefined' 
+    ? localStorage.getItem(STORAGE_KEY) 
+    : null;
+  
+  const initial = stored ? JSON.parse(stored) : {
+    token: null,
+    user: null,
+    tenant: null,
+    isAuthenticated: false
+  };
+
+  const { subscribe, set, update } = writable(initial);
+
+  if (typeof localStorage !== 'undefined' && stored) {
+    localStorage.setItem(STORAGE_KEY, stored);
+  }
 
   return {
     subscribe,
-
-    /** Call after successful login API response */
-    login(loginResponse) {
-      const state = {
-        token: loginResponse.token,
-        user: {
-          id:               loginResponse.user_id,
-          username:         loginResponse.username,
-          full_name:        loginResponse.full_name,
-          role:             loginResponse.role,
-          is_global_admin:   loginResponse.is_global_admin,
-        },
-        tenant: {
-          id:               loginResponse.tenant_id,
-          name:             loginResponse.tenant_name,
-        },
-        accessibleTenants: loginResponse.accessible_tenants || [],
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    
+    login: async (token, user, tenant = null) => {
+      const state = { token, user, tenant, isAuthenticated: true };
       set(state);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     },
 
-    /** Switch to a different tenant (for global admins) */
-    switchTenant(tenantId) {
-      update(state => {
-        const newTenant = state.accessibleTenants.find(t => t.id === tenantId);
-        if (newTenant) {
-          state.tenant = { id: newTenant.id, name: newTenant.name };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        }
-        return state;
+    logout: () => {
+      const state = { token: null, user: null, tenant: null, isAuthenticated: false };
+      set(state);
+      localStorage.removeItem(STORAGE_KEY);
+    },
+
+    updateUser: (userData) => {
+      update(s => {
+        const newState = { ...s, user: { ...s.user, ...userData } };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+        return newState;
       });
     },
 
-    /** Clear session on logout */
-    logout() {
-      localStorage.removeItem(STORAGE_KEY);
-      set({ token: null, user: null, tenant: null, accessibleTenants: [] });
-    },
-
-    /** Check if currently authenticated */
-    isLoggedIn() {
-      return !!loadFromStorage().token;
-    },
+    setTenant: (tenant) => {
+      update(s => {
+        const newState = { ...s, tenant };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+        return newState;
+      });
+    }
   };
 }
 

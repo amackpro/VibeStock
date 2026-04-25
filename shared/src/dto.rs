@@ -148,6 +148,8 @@ pub struct SupplierFilterParams {
     pub region_id: Option<Uuid>,
     pub country_id: Option<Uuid>,
     pub city_id: Option<Uuid>,
+    pub region: Option<String>,
+    pub country: Option<String>,
 }
 
 // ─── Stock Movement DTOs ──────────────────────────────────────────────────────
@@ -170,6 +172,9 @@ pub struct PaginationParams {
     pub per_page: Option<i64>,
     pub search: Option<String>,
     pub supplier_id: Option<Uuid>,
+    pub region: Option<String>,
+    pub country: Option<String>,
+    pub category: Option<String>,
 }
 
 impl PaginationParams {

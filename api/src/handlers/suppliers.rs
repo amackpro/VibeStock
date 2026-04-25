@@ -17,6 +17,12 @@ pub async fn list_suppliers(
     if params.region_id.is_some()  { conditions.push(format!("r.id = ${}", conditions.len() + 1)); }
     if params.country_id.is_some() { conditions.push(format!("co.id = ${}", conditions.len() + 1)); }
     if params.city_id.is_some()    { conditions.push(format!("ci.id = ${}", conditions.len() + 1)); }
+    if let Some(ref r) = params.region {
+        if !r.is_empty() { conditions.push(format!("r.name ILIKE ${}", conditions.len() + 1)); }
+    }
+    if let Some(ref c) = params.country {
+        if !c.is_empty() { conditions.push(format!("co.name ILIKE ${}", conditions.len() + 1)); }
+    }
 
     let where_clause = conditions.join(" AND ");
     let sql = format!(
@@ -39,10 +45,15 @@ pub async fn list_suppliers(
 
     let mut q = sqlx::query_as::<_, SupplierWithDetails>(&sql).bind(tenant_id);
     
-    let mut current_bind = 2;
-    if let Some(id) = params.region_id { q = q.bind(id); current_bind += 1; }
-    if let Some(id) = params.country_id { q = q.bind(id); current_bind += 1; }
+    if let Some(id) = params.region_id { q = q.bind(id); }
+    if let Some(id) = params.country_id { q = q.bind(id); }
     if let Some(id) = params.city_id    { q = q.bind(id); }
+    if let Some(ref r) = params.region {
+        if !r.is_empty() { q = q.bind(format!("%{}%", r)); }
+    }
+    if let Some(ref c) = params.country {
+        if !c.is_empty() { q = q.bind(format!("%{}%", c)); }
+    }
 
     let suppliers = q.fetch_all(&state.db).await?;
     Ok(Json(suppliers))
@@ -72,10 +83,11 @@ pub async fn create_supplier(
     Extension(tenant_id): Extension<Uuid>,
     Json(payload): Json<CreateSupplierRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
+    tracing::debug!("Creating supplier: tenant_id={}, payload={:?}", tenant_id, payload);
     let id = Uuid::new_v4();
     sqlx::query(
-        "INSERT INTO suppliers (id, tenant_id, name, contact_name, email, phone, address, city_id) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+        "INSERT INTO suppliers (id, tenant_id, name, contact_name, email, phone, address) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7)"
     )
     .bind(id)
     .bind(tenant_id)
@@ -84,7 +96,6 @@ pub async fn create_supplier(
     .bind(&payload.email)
     .bind(&payload.phone)
     .bind(&payload.address)
-    .bind(&payload.city_id)
     .execute(&state.db)
     .await?;
     Ok(Json(serde_json::json!({ "message": "Supplier created", "id": id })))

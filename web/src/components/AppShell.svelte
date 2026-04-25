@@ -1,644 +1,445 @@
 <script>
-  /**
-   * AppShell.svelte - Main application layout
-   * Uses the original glassmorphism theme from app.css
-   */
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { onMount } from 'svelte';
+  import { gsap } from 'gsap';
+  import { currentRoute, navigate, getRouteName } from '../stores/router.js';
   import { authStore } from '../stores/auth.js';
-  import { toast } from '../stores/toast.js';
-  import { themeStore } from '../stores/theme.js';
-  import {
-    LayoutDashboard, FileBarChart, Package, Factory,
-    ArrowLeftRight, Users, Building2, Zap, Menu,
-    Search, Bell, ChevronDown, LogOut, Sun, Moon,
-    ChevronLeft, ChevronRight, Globe
-  } from 'lucide-svelte';
 
-  export let activePage = 'dashboard';
-  const dispatch = createEventDispatcher();
+  let sidebar;
+  let user = null;
+  let hoverIndex = -1;
 
-  let sidebarCollapsed = false;
-  let showUserMenu = false;
-  let searchQuery = '';
-  let showTenantDropdown = false;
+  authStore.subscribe(a => user = a.user);
 
-  const navItems = [
-    { id: 'globe', label: 'Globe View', icon: Globe },
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'reports', label: 'Reports', icon: FileBarChart },
-    { id: 'products', label: 'Products', icon: Package },
-    { id: 'suppliers', label: 'Suppliers', icon: Factory },
-    { id: 'movements', label: 'Movements', icon: ArrowLeftRight },
-    { id: 'users', label: 'Users', icon: Users },
-    { id: 'tenants', label: 'Tenants', icon: Building2, requires: 'globalAdmin' },
+  const menuItems = [
+    { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
+    { path: '/products', icon: 'products', label: 'Products' },
+    { path: '/suppliers', icon: 'suppliers', label: 'Suppliers' },
+    { path: '/movements', icon: 'movements', label: 'Movements' },
+    { path: '/users', icon: 'users', label: 'Users' },
+    { path: '/reports', icon: 'reports', label: 'Reports' }
   ];
 
-  const navGroups = [
-    { title: 'Overview', items: ['globe', 'dashboard', 'reports'] },
-    { title: 'Inventory', items: ['products', 'suppliers', 'movements'] },
-    { title: 'Administration', items: ['users', 'tenants'] },
-  ];
-
-  $: user = $authStore.user;
-  $: tenant = $authStore.tenant;
-  $: accessibleTenants = $authStore.accessibleTenants || [];
-  $: isGlobalAdmin = user?.is_global_admin === true;
-  
-  $: filteredNavGroups = navGroups.map(group => ({
-    title: group.title,
-    items: group.items.map(id => navItems.find(n => n.id === id)).filter(item => {
-      if (item?.requires === 'globalAdmin') return isGlobalAdmin;
-      return true;
-    })
-  })).filter(group => group.items.length > 0);
-
-  function navigate(page) {
-    dispatch('navigate', page);
+  function handleNav(path) {
+    if (path === currentPath) return;
+    gsap.to('.main-content', {
+      opacity: 0,
+      x: -20,
+      duration: 0.2,
+      ease: 'power2.in',
+      onComplete: () => {
+        navigate(path);
+        gsap.fromTo('.main-content', 
+          { opacity: 0, x: 20 },
+          { opacity: 1, x: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' }
+        );
+      }
+    });
   }
 
-  function toggleSidebar() {
-    sidebarCollapsed = !sidebarCollapsed;
+  function handleMouseEnter(index) {
+    hoverIndex = index;
+    gsap.to(`.nav-item-${index}`, {
+      x: 6,
+      duration: 0.25,
+      ease: 'power2.out'
+    });
   }
 
-  function toggleTheme() {
-    themeStore.toggle();
-  }
-
-  async function switchTenant(tenantId) {
-    if (tenantId === tenant?.id) {
-      showTenantDropdown = false;
-      return;
-    }
-    authStore.switchTenant(tenantId);
-    toast.success(`Switched to ${tenant?.name}`);
-    showTenantDropdown = false;
-    window.location.reload();
+  function handleMouseLeave(index) {
+    hoverIndex = -1;
+    gsap.to(`.nav-item-${index}`, {
+      x: 0,
+      duration: 0.25,
+      ease: 'power2.out'
+    });
   }
 
   function logout() {
-    if (confirm('Are you sure you want to log out?')) {
-      authStore.logout();
-      toast.success('Logged out successfully');
-    }
+    gsap.to('.app-shell', {
+      opacity: 0,
+      duration: 0.3,
+      onComplete: () => {
+        authStore.logout();
+        navigate('/');
+      }
+    });
   }
 
-  function handleClickOutside(e) {
-    if (!e.target.closest('.user-menu-container')) {
-      showUserMenu = false;
-    }
-    if (!e.target.closest('.tenant-dropdown-container')) {
-      showTenantDropdown = false;
-    }
-  }
+  let currentPath = '/';
+  currentRoute.subscribe(p => currentPath = p);
 
   onMount(() => {
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    const tl = gsap.timeline();
+
+    tl.fromTo('.sidebar', 
+      { x: -100, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }
+    );
+
+    tl.fromTo('.logo', 
+      { y: -20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: 'back.out(1.5)' },
+      '-=0.3'
+    );
+
+    tl.fromTo('.nav-item', 
+      { x: -30, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.4, stagger: 0.08, ease: 'power3.out' },
+      '-=0.2'
+    );
+
+    tl.fromTo('.sidebar-footer', 
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' },
+      '-=0.2'
+    );
+
+    tl.fromTo('.header', 
+      { y: -30, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' },
+      '-=0.3'
+    );
+
+    tl.fromTo('.main-content', 
+      { opacity: 0, y: 30 },
+      { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', clearProps: 'all' },
+      '-=0.2'
+    );
   });
 </script>
 
-<div class="app-shell" class:collapsed={sidebarCollapsed}>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <div class="logo">
-        <div class="logo-icon">
-          <Zap size={20} />
-        </div>
-        {#if !sidebarCollapsed}
-          <div class="logo-text">
-            <span class="logo-name">VibeStock</span>
-          </div>
-        {/if}
+<div class="app-shell">
+  <aside class="sidebar" bind:this={sidebar}>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" fill="url(#grad1)"/>
+          <path d="M2 17l10 5 10-5" stroke="url(#grad1)" stroke-width="2"/>
+          <path d="M2 12l10 5 10-5" stroke="url(#grad1)" stroke-width="2"/>
+          <defs>
+            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#6366f1"/>
+              <stop offset="100%" style="stop-color:#22d3ee"/>
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
-      <button class="collapse-btn" on:click={toggleSidebar}>
-        {#if sidebarCollapsed}
-          <ChevronRight size={18} />
-        {:else}
-          <ChevronLeft size={18} />
-        {/if}
-      </button>
+      <span class="logo-text">VibeStock</span>
     </div>
 
-    <nav class="sidebar-nav">
-      {#each filteredNavGroups as group}
-        {#if !sidebarCollapsed}
-          <div class="nav-group-title">{group.title}</div>
-        {/if}
-        <div class="nav-group">
-          {#each group.items as item}
-            <button
-              class="nav-item"
-              class:active={activePage === item.id}
-              on:click={() => navigate(item.id)}
-              title={sidebarCollapsed ? item.label : ''}
-            >
-              <span class="nav-icon">
-                <svelte:component this={item.icon} size={18} />
-              </span>
-              {#if !sidebarCollapsed}
-                <span class="nav-label">{item.label}</span>
-              {/if}
-              {#if activePage === item.id}
-                <span class="nav-indicator"></span>
-              {/if}
-            </button>
-          {/each}
-        </div>
+    <nav class="nav-menu">
+      {#each menuItems as item, i}
+        <button 
+          class="nav-item nav-item-{i}" 
+          class:active={currentPath === item.path}
+          on:click={() => handleNav(item.path)}
+          on:mouseenter={() => handleMouseEnter(i)}
+          on:mouseleave={() => handleMouseLeave(i)}
+        >
+          <span class="nav-icon">
+            {#if item.icon === 'dashboard'}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="9" rx="1"/>
+                <rect x="14" y="3" width="7" height="5" rx="1"/>
+                <rect x="14" y="12" width="7" height="9" rx="1"/>
+                <rect x="3" y="16" width="7" height="5" rx="1"/>
+              </svg>
+            {:else if item.icon === 'products'}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4a2 2 0 00-1 1.73v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4a2 2 0 001-1.73z"/>
+                <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/>
+              </svg>
+            {:else if item.icon === 'suppliers'}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+              </svg>
+            {:else if item.icon === 'movements'}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+              </svg>
+            {:else if item.icon === 'users'}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+              </svg>
+            {:else if item.icon === 'reports'}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 20V10M12 20V4M6 20v-6"/>
+              </svg>
+            {/if}
+          </span>
+          <span class="nav-label">{item.label}</span>
+          {#if currentPath === item.path}
+            <span class="nav-indicator"></span>
+          {/if}
+        </button>
       {/each}
     </nav>
 
     <div class="sidebar-footer">
-      <button class="theme-btn" on:click={toggleTheme}>
-        {#if $themeStore === 'dark'}
-          <Sun size={18} />
-        {:else}
-          <Moon size={18} />
-        {/if}
+      <div class="user-info">
+        <div class="user-avatar">
+          {user?.username?.charAt(0).toUpperCase() || 'U'}
+        </div>
+        <div class="user-details">
+          <span class="user-name">{user?.username || 'User'}</span>
+          <span class="user-role">{user?.role || 'Staff'}</span>
+        </div>
+      </div>
+      <button class="logout-btn" on:click={logout} title="Logout">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+        </svg>
       </button>
     </div>
   </aside>
 
-  <!-- Main Area -->
-  <div class="main-area">
-    <!-- Header -->
+  <main class="main-area">
     <header class="header">
-      <div class="header-left">
-        <div class="search-bar">
-          <Search size={16} />
-          <input
-            type="text"
-            placeholder="Search products, categories..."
-            bind:value={searchQuery}
-          />
-        </div>
-      </div>
-
-      <div class="header-right">
-        <!-- Tenant Switcher -->
-        {#if isGlobalAdmin}
-          <div class="tenant-dropdown-container">
-            <button 
-              class="tenant-btn"
-              on:click|stopPropagation={() => showTenantDropdown = !showTenantDropdown}
-            >
-              <Building2 size={16} />
-              <span>{tenant?.name || 'Select'}</span>
-              <span class="arrow">
-                <ChevronDown size={14} />
-              </span>
-            </button>
-            {#if showTenantDropdown}
-              <div class="dropdown-menu">
-                {#each accessibleTenants as t}
-                  <button 
-                    class="dropdown-item" 
-                    class:active={t.id === tenant?.id}
-                    on:click={() => switchTenant(t.id)}
-                  >
-                    {t.name}
-                    {#if t.id === tenant?.id} ✓{/if}
-                  </button>
-                {/each}
-              </div>
-            {/if}
-          </div>
-        {:else if tenant}
-          <div class="tenant-badge">
-            <Building2 size={14} />
-            <span>{tenant.name}</span>
-          </div>
-        {/if}
-
-        <!-- User Menu -->
-        <div class="user-menu-container">
-          <button 
-            class="user-btn"
-            on:click|stopPropagation={() => showUserMenu = !showUserMenu}
-          >
-            <div class="avatar-sm">
-              {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-            </div>
-            <div class="user-info">
-              <span class="user-name">{user?.full_name || 'User'}</span>
-              <span class="user-role">{user?.role || 'staff'}</span>
-            </div>
-          </button>
-          
-          {#if showUserMenu}
-            <div class="dropdown-menu user-dropdown">
-              <div class="dropdown-header">
-                <div class="avatar-sm">
-                  {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-                <div>
-                  <div class="dropdown-user-name">{user?.full_name}</div>
-                  <div class="dropdown-user-email">@{user?.username}</div>
-                </div>
-              </div>
-              <div class="dropdown-divider"></div>
-              <button class="dropdown-item" on:click={logout}>
-                <LogOut size={16} />
-                <span>Logout</span>
-              </button>
-            </div>
-          {/if}
+      <h1 class="page-title">{getRouteName(currentPath)}</h1>
+      <div class="header-actions">
+        <div class="connection-status online">
+          <span class="status-dot"></span>
+          <span>Live</span>
         </div>
       </div>
     </header>
 
-    <!-- Content -->
-    <main class="content">
-      <slot></slot>
-    </main>
-  </div>
+    <div class="main-content">
+      <slot />
+    </div>
+  </main>
 </div>
 
 <style>
   .app-shell {
     display: flex;
-    width: 100%;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
+    background: var(--bg-primary);
   }
 
-  /* Sidebar - Dynamic width */
   .sidebar {
-    width: 22vw;
-    min-width: 240px;
-    max-width: 360px;
-    height: 100vh;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-right: 1px solid var(--border-glass);
+    width: 260px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    transition: width 0.3s ease;
+    position: fixed;
+    height: 100vh;
     z-index: 100;
-    flex-shrink: 0;
-  }
-
-  .collapsed .sidebar {
-    width: 80px;
-    min-width: 80px;
-  }
-
-  .sidebar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 16px;
-    border-bottom: 1px solid var(--border-surface);
   }
 
   .logo {
     display: flex;
     align-items: center;
     gap: 12px;
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .logo-icon {
-    width: 36px;
-    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
-    border-radius: 10px;
-    font-size: 1.2rem;
-    flex-shrink: 0;
   }
 
-  .logo-name {
-    font-weight: 800;
-    font-size: 1.1rem;
-    white-space: nowrap;
+  .logo-text {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  .collapse-btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid var(--border-glass);
-    border-radius: 8px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 0.75rem;
-    transition: all 0.15s ease;
-  }
-
-  .collapse-btn:hover {
-    background: var(--glass-hover);
-    color: var(--text-primary);
-  }
-
-  .collapsed .collapse-btn {
-    display: none;
-  }
-
-  /* Navigation */
-  .sidebar-nav {
+  .nav-menu {
     flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-  }
-
-  .nav-group-title {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 12px 12px 8px;
-    margin-top: 8px;
-  }
-
-  .nav-group-title:first-child {
-    margin-top: 0;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .nav-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    width: 100%;
-    padding: 10px 12px;
-    background: transparent;
-    border: none;
-    border-radius: 10px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
     color: var(--text-secondary);
     font-size: 0.9rem;
     font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all var(--transition-base);
     position: relative;
-    text-align: left;
+    overflow: hidden;
+  }
+
+  .nav-indicator {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: var(--accent-primary);
+    border-radius: 0 2px 2px 0;
+    transition: height 0.3s ease;
+  }
+
+  .nav-item.active .nav-indicator {
+    height: 24px;
   }
 
   .nav-item:hover {
-    background: var(--glass-hover);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--text-primary);
   }
 
   .nav-item.active {
     background: rgba(99, 102, 241, 0.15);
-    color: var(--accent-glow);
+    color: var(--accent-primary);
   }
 
   .nav-icon {
-    font-size: 1.1rem;
-    width: 24px;
-    text-align: center;
-    flex-shrink: 0;
-  }
-
-  .nav-label {
-    flex: 1;
-  }
-
-  .nav-indicator {
-    width: 4px;
-    height: 18px;
-    background: var(--accent-primary);
-    border-radius: 4px;
-    position: absolute;
-    right: 10px;
-  }
-
-  .collapsed .nav-item {
-    justify-content: center;
-    padding: 12px;
-  }
-
-  .collapsed .nav-label,
-  .collapsed .nav-indicator {
-    display: none;
-  }
-
-  /* Sidebar Footer */
-  .sidebar-footer {
-    padding: 16px;
-    border-top: 1px solid var(--border-surface);
-  }
-
-  .theme-btn {
-    width: 100%;
-    padding: 10px;
-    background: transparent;
-    border: 1px solid var(--border-glass);
-    border-radius: 10px;
-    color: var(--text-primary);
-    cursor: pointer;
-    font-size: 1.1rem;
-    transition: all 0.15s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
   }
 
-  .theme-btn:hover {
-    background: var(--glass-hover);
-    color: var(--accent-glow);
+  .nav-item:hover .nav-icon {
+    transform: scale(1.1);
   }
 
-  /* Main Area */
-  .main-area {
-    flex: 1;
-    min-width: 0; /* Important for flex children with overflow */
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
-
-  .collapsed .main-area {
-    /* No margin-left needed with flexbox sibling layout */
-  }
-
-  /* Header */
-  .header {
-    height: 64px;
-    position: sticky;
-    top: 0;
+  .sidebar-footer {
+    padding: 16px;
+    border-top: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 24px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-bottom: 1px solid var(--border-glass);
-    z-index: 50;
-  }
-
-  .header-left {
-    flex: 1;
-    max-width: 400px;
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  /* Tenant */
-  .tenant-btn,
-  .tenant-badge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: var(--glass-hover);
-    border: 1px solid var(--border-surface);
-    border-radius: 10px;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .tenant-btn:hover,
-  .tenant-badge:hover {
-    background: var(--border-glass);
-  }
-
-  .arrow {
-    font-size: 0.6rem;
-    opacity: 0.6;
-  }
-
-  .tenant-dropdown-container {
-    position: relative;
-  }
-
-  /* User Button */
-  .user-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 10px;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .user-btn:hover {
-    background: var(--glass-hover);
-  }
-
-  .avatar-sm {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
-    border-radius: 50%;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: white;
-    flex-shrink: 0;
   }
 
   .user-info {
     display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-primary), #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    color: white;
+  }
+
+  .user-details {
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
   }
 
   .user-name {
-    font-size: 0.85rem;
     font-weight: 600;
+    font-size: 0.9rem;
     color: var(--text-primary);
-    line-height: 1.2;
   }
 
   .user-role {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    text-transform: capitalize;
-  }
-
-  .user-menu-container {
-    position: relative;
-  }
-
-  /* Dropdown */
-  .dropdown-menu {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    min-width: 200px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-glass);
-    border-radius: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 200;
-    overflow: hidden;
-    animation: scaleIn 0.15s ease;
-  }
-
-  .dropdown-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-bottom: 1px solid var(--border-surface);
-  }
-
-  .dropdown-user-name {
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
-
-  .dropdown-user-email {
     font-size: 0.75rem;
     color: var(--text-muted);
   }
 
-  .dropdown-divider {
-    height: 1px;
-    background: var(--border-surface);
+  .logout-btn {
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    transition: all var(--transition-fast);
   }
 
-  .dropdown-item {
+  .logout-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-danger);
+  }
+
+  .main-area {
+    flex: 1;
+    margin-left: 260px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .header {
+    height: 72px;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .page-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .connection-status {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: 100%;
-    padding: 10px 12px;
-    background: transparent;
-    border: none;
-    font-size: 0.85rem;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: background 0.15s ease;
-    text-align: left;
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 600;
   }
 
-  .dropdown-item:hover {
-    background: var(--glass-hover);
+  .connection-status.online {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--accent-success);
   }
 
-  .dropdown-item.active {
-    background: rgba(99, 102, 241, 0.1);
-    color: var(--accent-glow);
+  .connection-status.offline {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-danger);
   }
 
-  /* Content */
-  .content {
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.9); }
+  }
+
+  .main-content {
     flex: 1;
-    overflow-y: auto;
-  }
-
-  @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+    padding: 32px;
   }
 </style>
