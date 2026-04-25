@@ -4,12 +4,12 @@
 
 ### Modern Cross-Platform Inventory Management System
 
-*A high-performance, real-time inventory management solution built with Rust, Tauri, and Kotlin*
+*A high-performance, real-time inventory management solution built with Rust, Svelte, and PostgreSQL*
 
 [![Status](https://img.shields.io/badge/Status-In%20Development-yellow?style=for-the-badge)](https://github.com/amackpro/vibestock)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![Tauri](https://img.shields.io/badge/Tauri-FFC131?style=for-the-badge&logo=Tauri&logoColor=white)](https://tauri.app/)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Svelte](https://img.shields.io/badge/Svelte-4A4A55?style=for-the-badge&logo=svelte&logoColor=FF3E00)](https://svelte.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 
@@ -45,11 +45,10 @@
 ### Why VibeStock?
 
 - **🚀 Blazing Fast**: Rust-powered backend with < 50ms average API response time
-- **💡 Lightweight**: Desktop app is only ~45MB (10x smaller than Electron alternatives)
 - **⚡ Real-Time**: WebSocket-based synchronization updates all clients in < 100ms
 - **🔒 Secure**: JWT authentication, bcrypt encryption, role-based access control
 - **🎨 Modern UI**: Beautiful glassmorphism design with smooth animations
-- **🌐 Cross-Platform**: Windows, macOS, and Linux support from a single codebase
+- **🌐 Web-Based**: Runs in any modern browser — no installation required
 
 ### Perfect For
 
@@ -64,7 +63,7 @@
 
 ## 🏗️ Architecture & Tech Stack
 
-VibeStock uses a modern, high-performance tech stack divided into three main clients connected to a central API.
+VibeStock uses a modern, high-performance tech stack with a Rust backend and a Svelte web frontend.
 
 ### 1. Backend API (`api/` and `shared/`)
 * **Language**: Rust
@@ -74,8 +73,7 @@ VibeStock uses a modern, high-performance tech stack divided into three main cli
 * **Real-time**: WebSockets (Axum Broadcast channels)
 * **Security**: JWT Authentication + Bcrypt password hashing
 
-### 2. Desktop Application (`desktop/`)
-* **Framework**: Tauri v2 (Rust-backed lightweight desktop apps)
+### 2. Web Application (`web/`)
 * **Frontend UI**: Svelte + Vite
 * **Design System**: Custom CSS Glassmorphism (Vibrant gradients, frosted glass, smooth animations)
 * **Features**: Live dashboard with 6 KPIs, real-time WebSocket stock alerts, CRUD modules for products and suppliers.
@@ -138,13 +136,15 @@ VibeStock uses a modern, high-performance tech stack divided into three main cli
 - **Product-supplier associations** for procurement tracking
 - **Supplier-wise reporting** for performance analysis
 
-### 👥 User Management
+### 👥 User & Organization Management
 
-- **Multi-user support** with role assignment
-- **User creation** with secure password handling
+- **Multi-tenancy support** - isolated workspaces for different organizations
+- **Organization Switcher** - Global admins can switch between tenants in real-time
+- **New User Registration** - Streamlined onboarding for new staff members
+- **User creation** with secure password handling and role assignment
 - **Active/Inactive status** management
-- **Username uniqueness** validation
 - **Permission-based UI** - users see only what they're allowed to
+- **Global Admin features** - system-wide user and tenant management
 
 ### 📈 Reports & Analytics
 
@@ -155,15 +155,7 @@ VibeStock uses a modern, high-performance tech stack divided into three main cli
 - **CSV Export** for all reports (Excel/Sheets compatible)
 - **Print-friendly** report layouts
 
-### 📱 Mobile Barcode Scanner
 
-- **Real-time barcode scanning** using Google ML Kit
-- **Instant product lookup** by barcode/SKU
-- **Stock movement submission** on-the-go
-- **Offline capability** with sync when connected
-- **Camera-based scanning** - no external hardware needed
-- **Works over local network** (Wi-Fi/LAN)
-- **Haptic feedback** on successful scan
 
 ### ⚡ Real-Time Synchronization
 
@@ -199,10 +191,10 @@ cp .env.example .env
 # 3. Start the backend API (auto-migrates database)
 cargo run -p api
 
-# 4. In a new terminal, start the desktop app
-cd desktop
+# 4. In a new terminal, start the web app
+cd web
 npm install
-npx @tauri-apps/cli dev
+npm run dev
 ```
 
 **Default Login**: `admin` / `Password@123`
@@ -271,18 +263,20 @@ cargo run -p api
 | `manager` | Manager | Product/supplier management, reports |
 | `staff1` | Staff | Basic operations only |
 
-#### Step 3: Running the Desktop Application
-The desktop app requires the API to be running first.
+#### Step 3: Running the Web Application
+The web app requires the API to be running first.
 ```bash
 # Open a new terminal
-cd desktop
+cd web
 
 # Install frontend dependencies
 npm install
 
-# Start the Tauri application
-npx @tauri-apps/cli dev
+# Start the development server
+npm run dev
 ```
+
+Then open `http://localhost:5173` in your browser.
 
 ## 📁 Project Structure
 
@@ -299,12 +293,8 @@ vibestock/
 │   ├── migrations/            # SQLx database schema & seed data
 │   └── src/                   # Route handlers, auth, ws, and db setup
 │
-├── desktop/                   # [Rust+Svelte] Tauri App
-│   ├── src-tauri/             # Tauri backend / capabilities / icons
-│   └── src/                   # Svelte UI, Routes, Glassmorphism CSS
-│
-└── android/                   # [Kotlin] Mobile Scanner App
-    └── app/src/main/java/     # CameraX, ML Kit, Retrofit logic
+└── web/                       # [Svelte+Vite] Web Application
+    └── src/                   # Svelte UI, Routes, Glassmorphism CSS
 ```
 
 ---
@@ -438,13 +428,12 @@ curl -X POST http://localhost:3000/api/products \
 | Database Query Time | < 10ms | With proper indexing |
 | Memory Usage (Backend) | ~50MB | Rust efficiency |
 
-### Desktop Application
+### Web Application
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| Application Size | ~45MB | 10x smaller than Electron |
-| Memory Usage | ~80MB | Lightweight Tauri |
-| Startup Time | < 3 seconds | Fast cold start |
+| Bundle Size | ~500KB | Optimized Vite build |
+| Initial Load Time | < 2 seconds | Fast on local network |
 | CPU Usage (Idle) | < 1% | Minimal resource consumption |
 
 ### Database Capacity
@@ -464,7 +453,7 @@ curl -X POST http://localhost:3000/api/products \
 - [x] Backend API with Rust + Axum
 - [x] PostgreSQL database with migrations
 - [x] JWT authentication and RBAC
-- [x] Desktop application with Tauri + Svelte
+- [x] Web application with Svelte + Vite
 - [x] Real-time WebSocket synchronization
 - [x] Product management module
 - [x] Stock movement tracking
@@ -473,6 +462,8 @@ curl -X POST http://localhost:3000/api/products \
 - [x] Dashboard with 6 KPIs
 - [x] Reports with CSV export
 - [x] Glassmorphism UI design
+- [x] Tenant Switcher for global admins
+- [x] Dynamic organization registration
 
 ### 🚧 In Progress
 
@@ -484,7 +475,6 @@ curl -X POST http://localhost:3000/api/products \
 
 #### Short-Term (3-6 months)
 
-- [ ] iOS mobile application
 - [ ] Cloud deployment (AWS/Azure)
 - [ ] Email/SMS notifications
 - [ ] Advanced analytics with ML-based forecasting
@@ -499,7 +489,6 @@ curl -X POST http://localhost:3000/api/products \
 - [ ] Barcode label printing
 - [ ] Purchase order management
 - [ ] Vendor portal
-- [ ] Mobile app for iOS
 - [ ] Advanced reporting with custom filters
 - [ ] GraphQL API option
 - [ ] Docker containerization
@@ -527,9 +516,9 @@ psql -U postgres -c "\l"
 cat .env | grep DATABASE_URL
 ```
 
-#### 2. Desktop App Won't Start
+#### 2. Web App Won't Start
 
-**Error**: `Failed to initialize Tauri`
+**Error**: `Failed to connect` or blank page
 
 **Solution**:
 ```bash
@@ -537,9 +526,10 @@ cat .env | grep DATABASE_URL
 cargo run -p api
 
 # Clear node_modules and reinstall
-cd desktop
+cd web
 rm -rf node_modules package-lock.json
 npm install
+npm run dev
 ```
 
 #### 3. WebSocket Not Connecting
@@ -566,14 +556,7 @@ psql -U postgres -c "CREATE DATABASE vibestock;"
 cargo run -p api
 ```
 
-#### 5. Mobile App Can't Connect to API
 
-**Error**: `Network request failed`
-
-**Solution**:
-- For **Physical Device**: Use your computer's local IP (e.g., `http://192.168.1.100:3000`)
-- Check both devices are on same Wi-Fi network
-- Ensure firewall allows incoming connections on port 3000
 
 ### Getting Help
 
@@ -600,14 +583,12 @@ We welcome contributions! Here's how you can help:
 
 - **Rust**: Follow `rustfmt` formatting
 - **JavaScript/Svelte**: Follow Prettier formatting
-- **Kotlin**: Follow official Kotlin style guide
 - Write meaningful commit messages
 - Add tests for new features
 - Update documentation as needed
 
 ### Areas Needing Help
 
-- [ ] iOS mobile application
 - [ ] Additional language translations
 - [ ] Performance optimizations
 - [ ] UI/UX improvements
@@ -638,16 +619,16 @@ in the Software without restriction...
 
 - [Rust Programming Language](https://www.rust-lang.org/) - Systems programming language
 - [Axum](https://github.com/tokio-rs/axum) - Web framework
-- [Tauri](https://tauri.app/) - Desktop application framework
+- [Vite](https://vitejs.dev/) - Frontend build tool
 - [Svelte](https://svelte.dev/) - Frontend framework
 - [PostgreSQL](https://www.postgresql.org/) - Database
 - [SQLx](https://github.com/launchbadge/sqlx) - Async SQL toolkit
-- [Google ML Kit](https://developers.google.com/ml-kit) - Barcode scanning
+
 
 ### Inspiration & Resources
 
 - Rust community for excellent documentation
-- Tauri team for making desktop apps lightweight
+- Svelte/Vite teams for excellent frontend tooling
 - Stack Overflow community for troubleshooting help
 - GitHub for hosting and collaboration
 
@@ -693,7 +674,7 @@ For detailed project information, please refer to:
 
 ### ⭐ Star this repo if you find it helpful!
 
-**Built with ❤️ using Rust, Tauri, and Svelte**
+**Built with ❤️ using Rust, Svelte, and Vite**
 
 *MCA Final Year Project - 2026*
 
