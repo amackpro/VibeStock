@@ -9,6 +9,7 @@
   import Register from './routes/Register.svelte';
   import Dashboard from './routes/Dashboard.svelte';
   import Products from './routes/Products.svelte';
+  import Categories from './routes/Categories.svelte';
   import Suppliers from './routes/Suppliers.svelte';
   import Movements from './routes/Movements.svelte';
   import Users from './routes/Users.svelte';
@@ -51,6 +52,8 @@
       <Dashboard />
     {:else if route === '/products'}
       <Products />
+    {:else if route === '/categories'}
+      <Categories />
     {:else if route === '/suppliers'}
       <Suppliers />
     {:else if route === '/movements'}

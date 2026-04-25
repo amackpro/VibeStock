@@ -77,8 +77,8 @@ pub async fn update_tenant(
 ) -> AppResult<Json<serde_json::Value>> {
     let rows = sqlx::query(
         "UPDATE tenants SET \
-         name = COALESCE($1, name), \
-         is_active = COALESCE($2, is_active), \
+         name = COALESCE($1::text, name), \
+         is_active = COALESCE($2::bool, is_active), \
          updated_at = now() \
          WHERE id = $3"
     )

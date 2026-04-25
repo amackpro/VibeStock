@@ -230,6 +230,7 @@ pub struct DashboardStats {
     pub out_of_stock_count: i64,
     pub total_stock_value: f64,
     pub total_movements_today: i64,
+    pub recent_activity: Vec<StockMovementWithDetails>,
 }
 
 // ─── Geography ────────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ const routes = {
   '/register': 'Register',
   '/dashboard': 'Dashboard',
   '/products': 'Products',
+  '/categories': 'Categories',
   '/suppliers': 'Suppliers',
   '/movements': 'Movements',
   '/users': 'Users',

@@ -38,12 +38,55 @@
     try {
       const data = await api.dashboard.stats();
       stats = data;
+      updateChartsWithData();
       animateNumbers();
     } catch (e) {
       toastStore.show('Failed to load dashboard', 'error');
     } finally {
       loading = false;
     }
+  }
+
+  function updateChartsWithData() {
+    if (!chart || !stats.recent_activity) return;
+
+    // Group movements by last 7 days for the chart
+    const labels = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      labels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+    }
+
+    const dayData = new Array(7).fill(0);
+    stats.recent_activity.forEach(m => {
+      const mDate = new Date(m.created_at);
+      const diffDays = Math.floor((now - mDate) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) {
+        dayData[6 - diffDays] += m.quantity;
+      }
+    });
+
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = dayData;
+    chart.update();
+  }
+
+  function timeAgo(dateString) {
+    const date = new Date(dateString);
+    const seconds = Math.floor((new Date() - date) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " mins ago";
+    return Math.floor(seconds) + " seconds ago";
   }
 
   function connectWebSocket() {
@@ -109,10 +152,10 @@
     chart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        labels: ['', '', '', '', '', '', ''],
         datasets: [{
-          label: 'Stock Movements',
-          data: [12, 19, 15, 25, 22, 30, 28],
+          label: 'Total Volume',
+          data: [0, 0, 0, 0, 0, 0, 0],
           borderColor: '#6366f1',
           backgroundColor: 'rgba(99, 102, 241, 0.1)',
           fill: true,
@@ -210,7 +253,6 @@
         <h3>Stock Movements</h3>
         <div class="chart-tabs">
           <button class="chart-tab active">Week</button>
-          <button class="chart-tab">Month</button>
         </div>
       </div>
       <div class="chart-body">
@@ -221,58 +263,39 @@
     <div class="chart-card recent-activity">
       <div class="chart-header">
         <h3>Recent Activity</h3>
-        <button class="view-all-btn">View All</button>
       </div>
       <div class="activity-list">
-        <div class="activity-item">
-          <div class="activity-icon stock-in">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 19V5M5 12l7-7 7 7"/>
-            </svg>
-          </div>
-          <div class="activity-content">
-            <span class="activity-title">Stock Added</span>
-            <span class="activity-meta">Dell XPS 15 - 50 units</span>
-          </div>
-          <span class="activity-time">2 min ago</span>
-        </div>
-        <div class="activity-item">
-          <div class="activity-icon stock-out">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 5v14M5 12l7 7 7-7"/>
-            </svg>
-          </div>
-          <div class="activity-content">
-            <span class="activity-title">Stock Sold</span>
-            <span class="activity-meta">Logitech MX Keys - 10 units</span>
-          </div>
-          <span class="activity-time">15 min ago</span>
-        </div>
-        <div class="activity-item">
-          <div class="activity-icon low-stock">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-            </svg>
-          </div>
-          <div class="activity-content">
-            <span class="activity-title">Low Stock Alert</span>
-            <span class="activity-meta">iPad Air - 5 units remaining</span>
-          </div>
-          <span class="activity-time">1 hour ago</span>
-        </div>
-        <div class="activity-item">
-          <div class="activity-icon adjustment">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </div>
-          <div class="activity-content">
-            <span class="activity-title">Stock Adjusted</span>
-            <span class="activity-meta">MacBook Pro - +3 units</span>
-          </div>
-          <span class="activity-time">3 hours ago</span>
-        </div>
+        {#if !stats.recent_activity || stats.recent_activity.length === 0}
+          <div class="empty-activity">No recent activity</div>
+        {:else}
+          {#each stats.recent_activity as activity}
+            <div class="activity-item">
+              <div class="activity-icon" class:stock-in={activity.movement_type === 'in'} class:stock-out={activity.movement_type === 'out'} class:low-stock={activity.movement_type === 'return'} class:adjustment={activity.movement_type === 'adjustment'}>
+                {#if activity.movement_type === 'in'}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                  </svg>
+                {:else if activity.movement_type === 'out'}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                  </svg>
+                {:else}
+                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                {/if}
+              </div>
+              <div class="activity-content">
+                <span class="activity-title">{activity.product_name}</span>
+                <span class="activity-meta">
+                  {activity.movement_type.toUpperCase()}: {activity.quantity} units by {activity.performed_by_name}
+                </span>
+              </div>
+              <span class="activity-time">{timeAgo(activity.created_at)}</span>
+            </div>
+          {/each}
+        {/if}
       </div>
     </div>
   </div>

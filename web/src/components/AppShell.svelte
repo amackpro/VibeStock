@@ -39,6 +39,7 @@
   const menuItems = [
     { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
     { path: '/products', icon: 'products', label: 'Products' },
+    { path: '/categories', icon: 'categories', label: 'Categories' },
     { path: '/suppliers', icon: 'suppliers', label: 'Suppliers' },
     { path: '/movements', icon: 'movements', label: 'Movements' },
     { path: '/users', icon: 'users', label: 'Users' },
@@ -175,6 +176,10 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4a2 2 0 00-1 1.73v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4a2 2 0 001-1.73z"/>
                 <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/>
+              </svg>
+            {:else if item.icon === 'categories'}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
               </svg>
             {:else if item.icon === 'suppliers'}
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

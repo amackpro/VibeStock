@@ -110,12 +110,12 @@ pub async fn update_supplier(
 ) -> AppResult<Json<serde_json::Value>> {
     let rows = sqlx::query(
         "UPDATE suppliers SET
-         name         = COALESCE($1, name),
-         contact_name = COALESCE($2, contact_name),
-         email        = COALESCE($3, email),
-         phone        = COALESCE($4, phone),
-         address      = COALESCE($5, address),
-         city_id      = COALESCE($6, city_id),
+         name         = COALESCE($1::text, name),
+         contact_name = COALESCE($2::text, contact_name),
+         email        = COALESCE($3::text, email),
+         phone        = COALESCE($4::text, phone),
+         address      = COALESCE($5::text, address),
+         city_id      = COALESCE($6::uuid, city_id),
          updated_at   = now()
          WHERE id = $7 AND tenant_id = $8"
     )

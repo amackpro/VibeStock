@@ -223,21 +223,23 @@ pub async fn update_product(
     Path(id): Path<Uuid>,
     Json(payload): Json<shared::UpdateProductRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
-    let rows = sqlx::query(
+    let result = sqlx::query(
         "UPDATE products SET
-         name              = COALESCE($1,  name),
-         description       = COALESCE($2,  description),
-         barcode           = COALESCE($3,  barcode),
-         category_id       = COALESCE($4,  category_id),
-         supplier_id       = COALESCE($5,  supplier_id),
-         unit_price        = COALESCE($6,  unit_price),
-         cost_price        = COALESCE($7,  cost_price),
-         reorder_level     = COALESCE($8,  reorder_level),
-         unit_of_measure   = COALESCE($9,  unit_of_measure),
-         is_active         = COALESCE($10, is_active),
-         image_url         = COALESCE($11, image_url),
+         name              = COALESCE($1::text,   name),
+         description       = COALESCE($2::text,   description),
+         barcode           = CASE WHEN $3 IS NOT NULL THEN NULLIF($3::text, '') ELSE barcode END,
+         category_id       = COALESCE($4::uuid,   category_id),
+         supplier_id       = COALESCE($5::uuid,   supplier_id),
+         unit_price        = COALESCE($6::float8, unit_price),
+         cost_price        = COALESCE($7::float8, cost_price),
+         reorder_level     = COALESCE($8::int,    reorder_level),
+         unit_of_measure   = COALESCE($9::text,   unit_of_measure),
+         is_active         = COALESCE($10::bool,  is_active),
+         image_url         = COALESCE($11::text,  image_url),
+         sku               = COALESCE($12::text,  sku),
+         quantity_in_stock = COALESCE($13::int,   quantity_in_stock),
          updated_at        = now()
-         WHERE id = $12 AND tenant_id = $13"
+         WHERE id = $14 AND tenant_id = $15"
     )
     .bind(&payload.name)
     .bind(&payload.description)
@@ -250,15 +252,21 @@ pub async fn update_product(
     .bind(&payload.unit_of_measure)
     .bind(payload.is_active)
     .bind(&payload.image_url)
+    .bind(&payload.sku)
+    .bind(payload.quantity_in_stock)
     .bind(id)
     .bind(tenant_id)
     .execute(&state.db)
-    .await?
-    .rows_affected();
+    .await
+    .map_err(|e| {
+        tracing::error!("Database error updating product {}: {}", id, e);
+        AppError::Database(e)
+    })?;
 
-    if rows == 0 {
+    if result.rows_affected() == 0 {
         return Err(AppError::NotFound(format!("Product {} not found", id)));
     }
+    
     Ok(Json(serde_json::json!({ "message": "Product updated" })))
 }
 

@@ -8,7 +8,6 @@ use axum::{
 use futures_util::{SinkExt, StreamExt};
 
 use crate::AppState;
-use shared::WsEvent;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,

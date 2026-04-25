@@ -69,15 +69,56 @@
         api.reports.movements(params),
         api.reports.valuation(params)
       ]);
-      inventory = inv.items || inv.data || inv;
-      lowStock = low.items || low.data || low;
-      movements = mov.items || mov.data || mov;
-      valuation = val.items || val.data || val;
+      inventory = inv.items || inv.data || inv || [];
+      lowStock = low.items || low.data || low || [];
+      movements = mov.items || mov.data || mov || [];
+      valuation = val.items || val.data || val || [];
+      
+      updateChartsData();
     } catch (e) {
       console.error('Failed to load reports', e);
       toastStore.show('Failed to load reports', 'error');
     } finally {
       loading = false;
+    }
+  }
+
+  function updateChartsData() {
+    if (inventoryChart) {
+      const lowCount = inventory.filter(i => i.quantity_in_stock <= i.reorder_level && i.quantity_in_stock > 0).length;
+      const outCount = inventory.filter(i => i.quantity_in_stock <= 0).length;
+      const okCount = inventory.length - lowCount - outCount;
+      
+      inventoryChart.data.datasets[0].data = [okCount, lowCount, outCount];
+      inventoryChart.update();
+    }
+
+    if (movementChart) {
+      // Group movements by last 6 months
+      const months = [];
+      const now = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push(d.toLocaleString('default', { month: 'short' }));
+      }
+
+      const stockIn = new Array(6).fill(0);
+      const stockOut = new Array(6).fill(0);
+
+      movements.forEach(m => {
+        const d = new Date(m.date);
+        const diff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+        if (diff >= 0 && diff < 6) {
+          const idx = 5 - diff;
+          if (m.movement_type === 'IN') stockIn[idx] += m.quantity;
+          else if (m.movement_type === 'OUT') stockOut[idx] += m.quantity;
+        }
+      });
+
+      movementChart.data.labels = months;
+      movementChart.data.datasets[0].data = stockIn;
+      movementChart.data.datasets[1].data = stockOut;
+      movementChart.update();
     }
   }
 
@@ -146,7 +187,7 @@
           data: {
             labels: ['In Stock', 'Low Stock', 'Out of Stock'],
             datasets: [{
-              data: [65, 25, 10],
+              data: [0, 0, 0],
               backgroundColor: ['#6366f1', '#f59e0b', '#ef4444'],
               borderWidth: 0
             }]
@@ -170,17 +211,17 @@
         movementChart = new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            labels: ['', '', '', '', '', ''],
             datasets: [
               {
                 label: 'Stock In',
-                data: [65, 59, 80, 81, 56, 55],
+                data: [0, 0, 0, 0, 0, 0],
                 backgroundColor: '#10b981',
                 borderRadius: 4
               },
               {
                 label: 'Stock Out',
-                data: [28, 48, 40, 19, 86, 27],
+                data: [0, 0, 0, 0, 0, 0],
                 backgroundColor: '#ef4444',
                 borderRadius: 4
               }
@@ -208,6 +249,8 @@
           }
         });
       }
+      
+      if (inventory.length > 0) updateChartsData();
     }, 100);
   }
 

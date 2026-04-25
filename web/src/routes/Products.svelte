@@ -26,6 +26,7 @@
     barcode: '',
     low_stock_threshold: 10,
     unit_price: 0,
+    cost_price: 0,
     supplier_id: '',
     current_stock: 0
   };
@@ -150,6 +151,7 @@
         barcode: product.barcode || '',
         low_stock_threshold: product.reorder_level || 10,
         unit_price: product.unit_price || 0,
+        cost_price: product.cost_price || 0,
         supplier_id: product.supplier_id || '',
         current_stock: product.quantity_in_stock || 0
       };
@@ -161,6 +163,7 @@
         barcode: '',
         low_stock_threshold: 10,
         unit_price: 0,
+        cost_price: 0,
         supplier_id: '',
         current_stock: 0
       };
@@ -428,18 +431,24 @@
 
         <div class="form-grid">
           <div class="form-group">
+            <label class="form-label">Cost Price (₹)</label>
+            <input type="number" class="input-field" bind:value={form.cost_price} min="0" step="0.01" />
+          </div>
+          <div class="form-group">
             <label class="form-label">Unit Price (₹)</label>
             <input type="number" class="input-field" bind:value={form.unit_price} min="0" step="0.01" />
           </div>
+        </div>
+
+        <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Current Stock</label>
             <input type="number" class="input-field" bind:value={form.current_stock} min="0" />
           </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Low Stock Threshold</label>
-          <input type="number" class="input-field" bind:value={form.low_stock_threshold} min="0" />
+          <div class="form-group">
+            <label class="form-label">Low Stock Threshold</label>
+            <input type="number" class="input-field" bind:value={form.low_stock_threshold} min="0" />
+          </div>
         </div>
 
         <div class="modal-actions">

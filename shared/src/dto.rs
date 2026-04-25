@@ -77,8 +77,10 @@ pub struct CreateProductRequest {
     pub unit_price: f64,
     #[validate(range(min = 0.0))]
     pub cost_price: f64,
+    #[serde(alias = "current_stock")]
     #[validate(range(min = 0))]
     pub quantity_in_stock: i32,
+    #[serde(alias = "low_stock_threshold")]
     #[validate(range(min = 0))]
     pub reorder_level: i32,
     pub unit_of_measure: String,
@@ -90,6 +92,7 @@ pub struct UpdateProductRequest {
     #[validate(length(min = 1, max = 255))]
     pub name: Option<String>,
     pub description: Option<String>,
+    pub sku: Option<String>,
     pub barcode: Option<String>,
     pub category_id: Option<Uuid>,
     pub supplier_id: Option<Uuid>,
@@ -97,8 +100,12 @@ pub struct UpdateProductRequest {
     pub unit_price: Option<f64>,
     #[validate(range(min = 0.0))]
     pub cost_price: Option<f64>,
+    #[serde(alias = "low_stock_threshold")]
     #[validate(range(min = 0))]
     pub reorder_level: Option<i32>,
+    #[serde(alias = "current_stock")]
+    #[validate(range(min = 0))]
+    pub quantity_in_stock: Option<i32>,
     pub unit_of_measure: Option<String>,
     pub is_active: Option<bool>,
     pub image_url: Option<String>,
