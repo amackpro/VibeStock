@@ -144,28 +144,30 @@
   function openModal(product = null) {
     editingProduct = product;
     if (product) {
-      form = { 
-        sku: product.sku || '',
-        name: product.name || '',
-        category_id: product.category_id || '',
-        barcode: product.barcode || '',
-        low_stock_threshold: product.reorder_level || 10,
-        unit_price: product.unit_price || 0,
-        cost_price: product.cost_price || 0,
-        supplier_id: product.supplier_id || '',
-        current_stock: product.quantity_in_stock || 0
+      form = {
+        sku:                 product.sku || '',
+        name:                product.name || '',
+        category_id:         product.category_id || '',
+        barcode:             product.barcode || '',
+        low_stock_threshold: product.reorder_level ?? 10,
+        unit_price:          product.unit_price ?? 0,
+        cost_price:          product.cost_price ?? 0,
+        supplier_id:         product.supplier_id || '',
+        current_stock:       product.quantity_in_stock ?? 0,
+        unit_of_measure:     product.unit_of_measure || 'pcs',
       };
     } else {
       form = {
-        sku: '',
-        name: '',
-        category_id: '',
-        barcode: '',
+        sku:                 '',
+        name:                '',
+        category_id:         '',
+        barcode:             '',
         low_stock_threshold: 10,
-        unit_price: 0,
-        cost_price: 0,
-        supplier_id: '',
-        current_stock: 0
+        unit_price:          0,
+        cost_price:          0,
+        supplier_id:         '',
+        current_stock:       0,
+        unit_of_measure:     'pcs',
       };
     }
     showModal = true;
@@ -191,11 +193,21 @@
 
   async function saveProduct() {
     try {
+      // Convert empty strings to null for optional UUID/text fields so the
+      // backend receives proper JSON null instead of "" which fails UUID parsing
+      const payload = {
+        ...form,
+        category_id:     form.category_id  || null,
+        supplier_id:     form.supplier_id  || null,
+        barcode:         form.barcode      || null,
+        unit_of_measure: form.unit_of_measure || 'pcs',
+      };
+
       if (editingProduct) {
-        await api.products.update(editingProduct.id, form);
+        await api.products.update(editingProduct.id, payload);
         toastStore.show('Product updated successfully', 'success');
       } else {
-        await api.products.create(form);
+        await api.products.create(payload);
         toastStore.show('Product created successfully', 'success');
       }
       await loadProducts();
@@ -449,6 +461,22 @@
             <label class="form-label">Low Stock Threshold</label>
             <input type="number" class="input-field" bind:value={form.low_stock_threshold} min="0" />
           </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Unit of Measure</label>
+          <select class="input-field" bind:value={form.unit_of_measure}>
+            <option value="pcs">Pieces (pcs)</option>
+            <option value="kg">Kilograms (kg)</option>
+            <option value="g">Grams (g)</option>
+            <option value="l">Litres (l)</option>
+            <option value="ml">Millilitres (ml)</option>
+            <option value="m">Metres (m)</option>
+            <option value="box">Box</option>
+            <option value="pack">Pack</option>
+            <option value="dozen">Dozen</option>
+            <option value="pair">Pair</option>
+          </select>
         </div>
 
         <div class="modal-actions">
