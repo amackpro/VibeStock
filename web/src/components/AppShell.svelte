@@ -18,7 +18,8 @@
   });
 
   async function loadTenants() {
-    if (user?.role === 'admin' || user?.is_global_admin) {
+    // Only the global admin can see and switch between all organizations
+    if (user?.is_global_admin) {
       try {
         const result = await api.tenants.list();
         tenants = result.data || result;
@@ -239,7 +240,7 @@
     <header class="header">
       <h1 class="page-title">{getRouteName(currentPath)}</h1>
       <div class="header-actions">
-        {#if tenants.length > 1 || user?.is_global_admin}
+        {#if user?.is_global_admin && tenants.length > 0}
           <div class="tenant-switcher">
             <button class="tenant-btn" on:click={() => showTenantMenu = !showTenantMenu}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -602,4 +603,33 @@
     text-align: left;
   }
 
-  .tenant-option:hover
+  .tenant-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+  }
+
+  .tenant-option.active {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-primary);
+  }
+
+  .tenant-option-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .t-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .t-slug {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .main-content {
+    flex: 1;
+    padding: 32px;
+  }
+</style>

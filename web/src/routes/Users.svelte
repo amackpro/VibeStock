@@ -104,6 +104,13 @@
   }
 
   const roles = ['admin', 'manager', 'staff'];
+
+  // True when the tenant already has exactly one admin (the current user).
+  // For global admins seeing multi-tenant lists, we skip the UI restriction
+  // and let the backend enforce it per-tenant.
+  $: tenantHasAdmin = currentUser?.is_global_admin
+    ? false
+    : users.some(u => u.role === 'admin' && !u.is_global_admin);
 </script>
 
 <div class="users-page">
@@ -154,15 +161,21 @@
           <div class="user-details">
             <div class="detail-row">
               <span class="detail-label">Role</span>
-              <select 
-                class="role-select" 
+              <select
+                class="role-select"
                 value={user.role}
                 on:change={(e) => updateRole(user.id, e.target.value)}
                 disabled={currentUser?.role !== 'admin' || user.id === currentUser?.id}
                 style="text-transform: capitalize;"
               >
                 {#each roles as role}
-                  <option value={role} style="text-transform: capitalize;">{role}</option>
+                  <option
+                    value={role}
+                    style="text-transform: capitalize;"
+                    disabled={role === 'admin' && tenantHasAdmin && user.role !== 'admin'}
+                  >
+                    {role}{role === 'admin' && tenantHasAdmin && user.role !== 'admin' ? ' (taken)' : ''}
+                  </option>
                 {/each}
               </select>
             </div>
@@ -243,9 +256,18 @@
           <label for="new_user_role">Role</label>
           <select id="new_user_role" bind:value={newUserData.role} class="role-select-modal">
             {#each roles as role}
-              <option value={role} style="text-transform: capitalize;">{role.charAt(0).toUpperCase() + role.slice(1)}</option>
+              <option
+                value={role}
+                style="text-transform: capitalize;"
+                disabled={role === 'admin' && tenantHasAdmin}
+              >
+                {role.charAt(0).toUpperCase() + role.slice(1)}{role === 'admin' && tenantHasAdmin ? ' (taken)' : ''}
+              </option>
             {/each}
           </select>
+          {#if tenantHasAdmin}
+            <p class="role-hint">Only one admin per organization is allowed.</p>
+          {/if}
         </div>
 
         <div class="modal-actions">
@@ -588,6 +610,13 @@
 
   .role-select-modal:focus {
     border-color: var(--accent-primary);
+  }
+
+  .role-hint {
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-style: italic;
   }
 
   .modal-actions {

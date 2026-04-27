@@ -80,9 +80,30 @@ pub async fn update_user_role(
         return Err(AppError::BadRequest("Invalid role provided".into()));
     }
 
-    // Prevent demoting the last admin or oneself (optional but good practice)
+    // Prevent demoting oneself
     if id == claims.sub && role_lower != "admin" {
         return Err(AppError::BadRequest("You cannot demote yourself".into()));
+    }
+
+    // Enforce single-admin-per-org: if promoting to admin, ensure no other user in the
+    // same tenant already holds that role (excluding the user being updated themselves).
+    if role_lower == "admin" {
+        let admin_exists: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM users \
+             WHERE tenant_id = (SELECT tenant_id FROM users WHERE id = $1) \
+               AND role = 'admin'::user_role \
+               AND id != $1"
+        )
+        .bind(id)
+        .fetch_one(&state.db)
+        .await?;
+
+        if admin_exists > 0 {
+            return Err(AppError::Conflict(
+                "This organization already has an admin. \
+                 Each organization can only have one admin.".into(),
+            ));
+        }
     }
 
     let user = if claims.is_global_admin {
@@ -202,6 +223,23 @@ pub async fn create_user(
         ));
     }
 
+    // Enforce single-admin-per-org rule
+    if role_str == "admin" {
+        let admin_exists: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM users WHERE tenant_id = $1 AND role = 'admin'::user_role"
+        )
+        .bind(tenant_id)
+        .fetch_one(&state.db)
+        .await?;
+
+        if admin_exists > 0 {
+            return Err(AppError::Conflict(
+                "This organization already has an admin. \
+                 Each organization can only have one admin.".into(),
+            ));
+        }
+    }
+
     let exists: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM users WHERE username = $1 OR email = $2"
     )
@@ -313,4 +351,5 @@ pub async fn delete_user(
         .execute(&state.db)
         .await?;
 
-    Ok(Json(serde_json::json!({ "me
+    Ok(Json(serde_json::json!({ "message": "User deleted successfully" })))
+}

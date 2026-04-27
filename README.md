@@ -1,12 +1,12 @@
 <div align="center">
 
-# 📦 VibeStock
+# 📦 NexStock
 
 ### Modern Cross-Platform Inventory Management System
 
 *A high-performance, real-time inventory management solution built with Rust, Svelte, and PostgreSQL*
 
-[![Status](https://img.shields.io/badge/Status-In%20Development-yellow?style=for-the-badge)](https://github.com/amackpro/vibestock)
+[![Status](https://img.shields.io/badge/Status-In%20Development-yellow?style=for-the-badge)](https://github.com/amackpro/nexstock)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -40,9 +40,9 @@
 
 ## 🌟 Overview
 
-**VibeStock** is a fully-featured, cross-platform inventory management system designed for modern businesses. Built as an MCA Final Year Project, it showcases cutting-edge technologies and best practices in software engineering.
+**NexStock** is a fully-featured, cross-platform inventory management system designed for modern businesses. Built as an MCA Final Year Project, it showcases cutting-edge technologies and best practices in software engineering.
 
-### Why VibeStock?
+### Why NexStock?
 
 - **🚀 Blazing Fast**: Rust-powered backend with < 50ms average API response time
 - **⚡ Real-Time**: WebSocket-based synchronization updates all clients in < 100ms
@@ -63,7 +63,7 @@
 
 ## 🏗️ Architecture & Tech Stack
 
-VibeStock uses a modern, high-performance tech stack with a Rust backend and a Svelte web frontend.
+NexStock uses a modern, high-performance tech stack with a Rust backend and a Svelte web frontend.
 
 ### 1. Backend API (`api/` and `shared/`)
 * **Language**: Rust
@@ -177,12 +177,12 @@ VibeStock uses a modern, high-performance tech stack with a Rust backend and a S
 
 ## 🚀 Quick Start
 
-Get VibeStock up and running in 5 minutes:
+Get NexStock up and running in 5 minutes:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/amackpro/vibestock.git
-cd vibestock
+git clone https://github.com/amackpro/nexstock.git
+cd nexstock
 
 # 2. Setup environment
 cp .env.example .env
@@ -230,14 +230,14 @@ psql --version   # Should show 15.0 or higher
 1. Open PostgreSQL (`psql` or pgAdmin).
 2. Create an empty database:
    ```sql
-   CREATE DATABASE vibestock;
+   CREATE DATABASE nexstock;
    ```
 3. Copy the environment config template:
    ```bash
    cp .env.example .env
    ```
 4. Open `.env` and configure your `DATABASE_URL` with your PG credentials.
-   *(Example: `postgres://postgres:password@localhost:5432/vibestock`)*
+   *(Example: `postgres://postgres:password@localhost:5432/nexstock`)*
 
 #### Step 2: Running the API Server
 
@@ -281,7 +281,7 @@ Then open `http://localhost:5173` in your browser.
 ## 📁 Project Structure
 
 ```text
-vibestock/
+nexstock/
 ├── Cargo.toml                 # Workspace root config
 ├── .env                       # Environment variables (DB, JWT secret)
 │
@@ -549,8 +549,8 @@ npm run dev
 **Solution**:
 ```bash
 # Reset database (WARNING: deletes all data)
-psql -U postgres -c "DROP DATABASE vibestock;"
-psql -U postgres -c "CREATE DATABASE vibestock;"
+psql -U postgres -c "DROP DATABASE nexstock;"
+psql -U postgres -c "CREATE DATABASE nexstock;"
 
 # Restart API (migrations auto-apply)
 cargo run -p api
@@ -560,7 +560,7 @@ cargo run -p api
 
 ### Getting Help
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/amackpro/vibestock/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/amackpro/nexstock/issues)
 - **Email**: Prajwal.kumar008@gmail.com
 
 ---
@@ -604,7 +604,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ```
 MIT License
 
-Copyright (c) 2026 VibeStock Contributors
+Copyright (c) 2026 NexStock Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -678,6 +678,6 @@ For detailed project information, please refer to:
 
 *MCA Final Year Project - 2026*
 
-[Report Bug](https://github.com/amackpro/vibestock/issues) • [Request Feature](https://github.com/amackpro/vibestock/issues) • [Documentation](PROJECT_SYNOPSIS.md)
+[Report Bug](https://github.com/amackpro/nexstock/issues) • [Request Feature](https://github.com/amackpro/nexstock/issues) • [Documentation](PROJECT_SYNOPSIS.md)
 
 </div>

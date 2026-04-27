@@ -28,6 +28,20 @@ pub struct RegisterRequest {
     pub mode: Option<String>,
     pub tenant_name: Option<String>,
     pub tenant_slug: Option<String>,
+    /// 6-digit OTP sent to the user's email (required when SMTP is configured)
+    pub otp: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct SendOtpRequest {
+    #[validate(email)]
+    pub email: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct VerifyOtpRequest {
+    pub email: String,
+    pub otp:   String,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -232,4 +246,13 @@ pub enum WsEvent {
     },
     LowStock {
         product_id: Uuid,
-        product_nam
+        product_name: String,
+        quantity: i32,
+        reorder_level: i32,
+    },
+    NewMovement {
+        product_id: Uuid,
+        movement_type: String,
+        quantity: i32,
+    },
+}

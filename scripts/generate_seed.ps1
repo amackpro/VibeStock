@@ -1,7 +1,7 @@
 
-# VibeStock Showcase Seed - Fixed version
+# NexStock Showcase Seed - Fixed version
 $psql = "C:\Program Files\PostgreSQL\18\bin\psql.exe"
-$db   = "postgresql://postgres:postgres@localhost:5432/vibestock"
+$db   = "postgresql://postgres:postgres@localhost:5432/nexstock"
 
 function Q($sql) {
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($sql)
@@ -144,7 +144,7 @@ foreach ($iso in $cityData.Keys) {
             foreach ($supPrefix in @($cat.sup1, $cat.sup2)) {
                 $sc++
                 $sn = "$supPrefix $cn" -replace "'","''"
-                $em = ($sn -replace "[^a-zA-Z0-9]","").ToLower().Substring(0,[Math]::Min(30,$sn.Length)) + "@vibestock.demo"
+                $em = ($sn -replace "[^a-zA-Z0-9]","").ToLower().Substring(0,[Math]::Min(30,$sn.Length)) + "@nexstock.demo"
                 Q "INSERT INTO suppliers (name,contact_name,email,phone,address,tenant_id,city_id)
                    VALUES ('$sn','Manager','$em','+0-000-$("{0:D4}" -f ($sc % 9999))','$cn','$tenantId','$cityId')
                    ON CONFLICT DO NOTHING;" | Out-Null

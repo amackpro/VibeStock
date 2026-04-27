@@ -485,4 +485,6 @@
   }
 
   .register-link a:hover {
-    color:
+    color: var(--accent-secondary);
+  }
+</style>

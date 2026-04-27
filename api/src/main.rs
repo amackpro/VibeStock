@@ -26,7 +26,7 @@ use api::{
     config::Config,
     db,
     handlers::{
-        auth_handler::{health, list_orgs, login, register},
+        auth_handler::{health, list_orgs, login, register, send_otp, verify_otp},
         categories::{create_category, delete_category, get_category, list_categories, update_category},
         dashboard::get_stats,
         geography::{
@@ -139,6 +139,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/auth/login",      post(login))
         .route("/auth/register",   post(register))
         .route("/auth/orgs",       get(list_orgs))
+        .route("/auth/send-otp",   post(send_otp))
+        .route("/auth/verify-otp", post(verify_otp))
         .route("/ws",              get(ws_handler))
         .route("/geography/regions",                  get(list_regions))
         .route("/geography/regions/:id/countries",    get(list_countries_by_region))
@@ -155,4 +157,9 @@ async fn main() -> anyhow::Result<()> {
         .with_state(state);
 
     let addr = config.server_addr();
-    let listener = to
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    tracing::info!("🚀 NexStock API running on http://{}", addr);
+
+    axum::serve(listener, app).await?;
+    Ok(())
+}

@@ -65,7 +65,7 @@ CREATE INDEX idx_movements_tenant ON stock_movements(tenant_id);
 INSERT INTO tenants (id, name, slug, is_active, created_at, updated_at)
 VALUES 
     ('00000000-0000-0000-0000-000000000001', 'Default Tenant', 'default', true, NOW(), NOW()),
-    ('00000000-0000-0000-0000-000000000002', 'VibeStock Demo', 'demo', true, NOW(), NOW())
+    ('00000000-0000-0000-0000-000000000002', 'NexStock Demo', 'demo', true, NOW(), NOW())
 ON CONFLICT (slug) DO NOTHING;
 
 -- =============================================================================

@@ -63,4 +63,10 @@
       <Users />
     {:else if route === '/reports'}
       <Reports />
- 
+    {:else if route === '/tenants'}
+      <Tenants />
+    {/if}
+  </AppShell>
+{:else}
+  <Login />
+{/if}

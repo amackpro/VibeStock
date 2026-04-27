@@ -56,9 +56,11 @@ export const api = {
   setBase: (url) => { BASE_URL = url; },
 
   auth: {
-    login:    (creds) => request('POST', '/auth/login',    creds),
-    register: (data)  => request('POST', '/auth/register', data),
-    orgs:     ()      => request('GET',  '/auth/orgs'),
+    login:    (creds)  => request('POST', '/auth/login',    creds),
+    register: (data)   => request('POST', '/auth/register', data),
+    orgs:     ()       => request('GET',  '/auth/orgs'),
+    sendOtp:   (email)       => request('POST', '/auth/send-otp',   { email }),
+    verifyOtp: (email, otp) => request('POST', '/auth/verify-otp', { email, otp }),
   },
 
   dashboard: {
@@ -141,4 +143,12 @@ export function openWebSocket(onMessage) {
   const ws = new WebSocket(wsUrl);
 
   ws.onopen    = () => console.info('[WS] Connected');
-  ws.onclose   
+  ws.onclose   = () => console.info('[WS] Closed');
+  ws.onerror   = (e) => console.error('[WS] Error', e);
+  ws.onmessage = (ev) => {
+    try { onMessage(JSON.parse(ev.data)); }
+    catch {}
+  };
+
+  return ws;
+}

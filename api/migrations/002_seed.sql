@@ -28,8 +28,8 @@ ON CONFLICT (name) DO NOTHING;
 
 -- USERS (Password: Password@123)
 INSERT INTO users (id, username, email, password_hash, full_name, role) VALUES
-('aa000000-0000-0000-0000-000000000001', 'admin', 'admin@vibestock.local', '$2b$12$49a3Bj648XXrBBWJrM87TuG/zHT8JPW1Kvx1QUvQXXCz5hoQQn23u', 'System Administrator', 'admin'),
-('aa000000-0000-0000-0000-000000000002', 'manager', 'manager@vibestock.local', '$2b$12$49a3Bj648XXrBBWJrM87TuG/zHT8JPW1Kvx1QUvQXXCz5hoQQn23u', 'Warehouse Manager', 'manager');
+('aa000000-0000-0000-0000-000000000001', 'admin', 'admin@nexstock.local', '$2b$12$49a3Bj648XXrBBWJrM87TuG/zHT8JPW1Kvx1QUvQXXCz5hoQQn23u', 'System Administrator', 'admin'),
+('aa000000-0000-0000-0000-000000000002', 'manager', 'manager@nexstock.local', '$2b$12$49a3Bj648XXrBBWJrM87TuG/zHT8JPW1Kvx1QUvQXXCz5hoQQn23u', 'Warehouse Manager', 'manager');
 
 -- CATEGORIES
 INSERT INTO categories (id, name, description) VALUES

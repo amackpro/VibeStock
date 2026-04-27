@@ -1,8 +1,8 @@
 -- =============================================================================
 -- Migration: 001_init.sql
--- Description: Initial schema for VibeStock Inventory Management System
+-- Description: Initial schema for NexStock Inventory Management System
 -- Creates: users, categories, suppliers, products, stock_movements tables
--- Author: VibeStock MCA Final Year Project
+-- Author: NexStock MCA Final Year Project
 -- =============================================================================
 
 -- Enable UUID extension

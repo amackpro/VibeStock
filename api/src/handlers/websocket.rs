@@ -23,7 +23,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     // Send welcome message
     let welcome = serde_json::json!({
         "event": "Connected",
-        "payload": { "message": "VibeStock real-time feed connected" }
+        "payload": { "message": "NexStock real-time feed connected" }
     });
     let _ = sender.send(Message::Text(welcome.to_string())).await;
 

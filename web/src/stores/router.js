@@ -22,4 +22,7 @@ export function navigate(path, params = {}) {
 }
 
 export function getRouteName(path) {
-  return routes[path] || 'U
+  return routes[path] || 'Unknown';
+}
+
+export { routes };

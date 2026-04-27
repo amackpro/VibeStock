@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["VibeStock MCA Project"]
+authors = ["NexStock MCA Project"]
 license = "MIT"
 
 [workspace.dependencies]
@@ -41,3 +41,5 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 validator = { version = "0.18", features = ["derive"] }
 futures-util = "0.3"
 tokio-tungstenite = "0.21"
+rand = "0.8"
+lettre = { version = "0.11", features = ["smtp-transport", "tokio1-native-tls", "builder"] }

@@ -117,4 +117,12 @@ pub async fn get_tenant_by_slug(
     Path(slug): Path<String>,
 ) -> AppResult<Json<Tenant>> {
     let tenant = sqlx::query_as::<_, Tenant>(
-        "SELECT id, name, slu
+        "SELECT id, name, slug, owner_user_id, is_active, created_at, updated_at \
+         FROM tenants WHERE slug = $1"
+    )
+    .bind(slug)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| AppError::NotFound("Tenant not found".to_string()))?;
+    Ok(Json(tenant))
+}
