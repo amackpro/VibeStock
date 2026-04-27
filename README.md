@@ -6,7 +6,7 @@
 
 *A high-performance, real-time inventory management solution built with Rust, Svelte, and PostgreSQL*
 
-[![Status](https://img.shields.io/badge/Status-In%20Development-yellow?style=for-the-badge)](https://github.com/amackpro/nexstock)
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)](https://github.com/amackpro/nexstock)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -46,9 +46,10 @@
 
 - **🚀 Blazing Fast**: Rust-powered backend with < 50ms average API response time
 - **⚡ Real-Time**: WebSocket-based synchronization updates all clients in < 100ms
-- **🔒 Secure**: JWT authentication, bcrypt encryption, role-based access control
+- **🔒 Secure**: JWT authentication, bcrypt encryption, role-based access control, OTP email verification
 - **🎨 Modern UI**: Beautiful glassmorphism design with smooth animations
 - **🌐 Web-Based**: Runs in any modern browser — no installation required
+- **🏢 Multi-Tenant**: Full organization isolation with a global admin layer
 
 ### Perfect For
 
@@ -72,11 +73,12 @@ NexStock uses a modern, high-performance tech stack with a Rust backend and a Sv
 * **ORM / Queries**: SQLx (async, purely Rust SQL toolkit)
 * **Real-time**: WebSockets (Axum Broadcast channels)
 * **Security**: JWT Authentication + Bcrypt password hashing
+* **Email**: lettre async SMTP transport (Gmail STARTTLS on port 587)
 
 ### 2. Web Application (`web/`)
 * **Frontend UI**: Svelte + Vite
-* **Design System**: Custom CSS Glassmorphism (Vibrant gradients, frosted glass, smooth animations)
-* **Features**: Live dashboard with 6 KPIs, real-time WebSocket stock alerts, CRUD modules for products and suppliers.
+* **Design System**: Custom CSS Glassmorphism (vibrant gradients, frosted glass, smooth animations)
+* **Features**: Live dashboard with 6 KPIs, real-time WebSocket stock alerts, CRUD modules for products, suppliers, categories, users, and organizations
 
 ---
 
@@ -85,7 +87,9 @@ NexStock uses a modern, high-performance tech stack with a Rust backend and a Sv
 ### 🔐 Authentication & Security
 
 - **JWT-based authentication** with token expiry and refresh
-- **Role-based access control** (Admin, Manager, Staff)
+- **Role-based access control** — three roles: Admin, Manager, Staff
+- **OTP email verification** — 6-digit code sent via Gmail SMTP, verified in real-time as the user types; account creation is blocked until the code is confirmed
+- **Single admin per organization** — enforced at both backend (HTTP 409) and frontend (disabled UI option); prevents conflicting administrative authority
 - **Bcrypt password hashing** with salt (cost factor 12)
 - **SQL injection prevention** via parameterized queries
 - **CORS protection** for API security
@@ -138,13 +142,14 @@ NexStock uses a modern, high-performance tech stack with a Rust backend and a Sv
 
 ### 👥 User & Organization Management
 
-- **Multi-tenancy support** - isolated workspaces for different organizations
-- **Organization Switcher** - Global admins can switch between tenants in real-time
-- **New User Registration** - Streamlined onboarding for new staff members
+- **Multi-tenancy support** — complete data isolation between organizations
+- **Dual registration modes** — "New Organization" creates a fresh tenant; "Join Existing Organization" submits a pending-approval request
+- **Organization Switcher** — visible only to global admins; lets them switch data context into any tenant in real-time
+- **Single-admin rule** — each organization can have at most one Admin; the backend enforces this with a COUNT check and returns HTTP 409 on violation; the frontend disables and labels the option "(taken)"
 - **User creation** with secure password handling and role assignment
-- **Active/Inactive status** management
-- **Permission-based UI** - users see only what they're allowed to
-- **Global Admin features** - system-wide user and tenant management
+- **Active/Inactive status** management per user
+- **Permission-based UI** — users see only what their role permits
+- **Global Admin dashboard** — full tenant CRUD with live user/product/supplier counts fetched via optimized scalar subqueries
 
 ### 📈 Reports & Analytics
 
@@ -236,8 +241,20 @@ psql --version   # Should show 15.0 or higher
    ```bash
    cp .env.example .env
    ```
-4. Open `.env` and configure your `DATABASE_URL` with your PG credentials.
-   *(Example: `postgres://postgres:password@localhost:5432/nexstock`)*
+4. Open `.env` and configure your credentials:
+   ```env
+   DATABASE_URL=postgres://postgres:password@localhost:5432/nexstock
+   JWT_SECRET=your_random_secret_here
+
+   # Gmail SMTP — required for OTP email verification
+   # Use a Gmail App Password (not your regular password)
+   # Generate at: Google Account → Security → 2-Step Verification → App passwords
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your.email@gmail.com
+   SMTP_PASS=your_16_char_app_password
+   SMTP_FROM=your.email@gmail.com
+   ```
 
 #### Step 2: Running the API Server
 
@@ -282,19 +299,93 @@ Then open `http://localhost:5173` in your browser.
 
 ```text
 nexstock/
-├── Cargo.toml                 # Workspace root config
-├── .env                       # Environment variables (DB, JWT secret)
+├── Cargo.toml                       # Workspace root — members: [api, shared]
+├── Cargo.lock
+├── .env                             # Environment variables (DB, JWT, SMTP)
+├── .env.example                     # Template for new contributors
+├── .gitignore
+├── LICENSE
+├── README.md
+├── package.json                     # Root-level scripts (optional)
 │
-├── shared/                    # [Rust] Shared structs and DTOs
-│   ├── src/models.rs          # DB models (Product, StockMovement, etc)
-│   └── src/errors.rs          # Unified Application Errors
+├── shared/                          # [Rust] Types shared between api crates
+│   ├── Cargo.toml
+│   └── src/
+│       ├── lib.rs                   # Re-exports all public types
+│       ├── models.rs                # DB row types (ProductWithDetails, etc.)
+│       ├── dto.rs                   # Request/Response structs incl. OTP types
+│       └── errors.rs                # AppError enum + AppResult type alias
 │
-├── api/                       # [Rust] Axum Backend
-│   ├── migrations/            # SQLx database schema & seed data
-│   └── src/                   # Route handlers, auth, ws, and db setup
+├── api/                             # [Rust] Axum REST API server
+│   ├── Cargo.toml
+│   ├── .env                         # Local override (DB URL for sqlx-cli)
+│   ├── migrations/
+│   │   ├── 001_init.sql             # Core schema: users, products, suppliers…
+│   │   ├── 002_seed.sql             # Demo accounts and sample data
+│   │   ├── 003_fix_passwords.sql    # Bcrypt hash migration
+│   │   ├── 004_multi_tenant_support.sql  # Tenant isolation columns
+│   │   ├── 005_geography_support.sql    # Regions / countries / cities tables
+│   │   ├── 006_india_seed.sql       # Geography seed data for India
+│   │   ├── 007_tenant_scoped_uniques.sql # Unique constraints per tenant
+│   │   └── 008_otp_requests.sql     # Ephemeral OTP storage (email PK, 10 min TTL)
+│   └── src/
+│       ├── main.rs                  # DB pool, WS broadcast channel, Axum router
+│       ├── lib.rs                   # AppState struct
+│       ├── config.rs                # Env config: DB, JWT, SMTP fields + smtp_enabled()
+│       ├── auth.rs                  # JWT middleware, Claims extractor
+│       ├── db.rs                    # DB pool initializer + migration runner
+│       ├── middleware.rs            # Tenant-ID extraction middleware
+│       └── handlers/
+│           ├── mod.rs
+│           ├── auth_handler.rs      # login, register, list_orgs, send_otp, verify_otp
+│           ├── products.rs          # Product CRUD, barcode lookup, pagination
+│           ├── categories.rs        # Category CRUD
+│           ├── suppliers.rs         # Supplier CRUD
+│           ├── stock_movements.rs   # Movement log (IN / OUT / ADJUSTMENT)
+│           ├── dashboard.rs         # Aggregated KPI stats endpoint
+│           ├── users.rs             # User CRUD + single-admin-per-org guard
+│           ├── tenants.rs           # Tenant CRUD with scalar subquery counts
+│           ├── reports.rs           # Inventory, low-stock, movements, valuation
+│           ├── geography.rs         # Region → country → city hierarchy + stats
+│           └── websocket.rs         # WS upgrade handler + broadcast loop
 │
-└── web/                       # [Svelte+Vite] Web Application
-    └── src/                   # Svelte UI, Routes, Glassmorphism CSS
+├── web/                             # [Svelte + Vite] Web Application
+│   ├── index.html
+│   ├── vite.config.js               # Dev proxy → localhost:3000
+│   ├── package.json
+│   └── src/
+│       ├── main.js                  # Svelte app entry point
+│       ├── App.svelte               # SPA router + route guards
+│       ├── app.css                  # Global glassmorphism styles
+│       ├── assets/                  # Static images / icons
+│       ├── lib/
+│       │   └── api.js               # Typed fetch client for all API routes + WS
+│       ├── stores/
+│       │   ├── auth.js              # Auth store: JWT token, user, active tenant
+│       │   ├── router.js            # Client-side router store
+│       │   └── toast.js             # Toast notification store
+│       ├── components/
+│       │   ├── AppShell.svelte      # Sidebar nav + tenant switcher (global admin only)
+│       │   └── Toast.svelte         # Toast notification component
+│       └── routes/
+│           ├── Login.svelte         # Login form
+│           ├── Register.svelte      # Dual-mode registration + OTP email verification
+│           ├── Dashboard.svelte     # 6 KPIs + live WebSocket updates
+│           ├── Products.svelte      # Product list, search, filter, CRUD modal
+│           ├── Categories.svelte    # Category management
+│           ├── Suppliers.svelte     # Supplier management
+│           ├── Movements.svelte     # Stock movement log with filters
+│           ├── Users.svelte         # User management + single-admin guard UI
+│           ├── Tenants.svelte       # Organization management (global admin only)
+│           └── Reports.svelte       # Inventory / valuation / low-stock / CSV export
+│
+├── documentation/
+│   ├── NexStock_report.docx         # Full MCA project report
+│   ├── MCA-report-format.docx       # College format template
+│   └── *.jpg                        # Screenshots referenced in the report
+│
+└── scripts/
+    └── generate_seed.ps1            # PowerShell helper for seed data generation
 ```
 
 ---
@@ -311,33 +402,58 @@ http://localhost:3000/api
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | `POST` | `/auth/login` | User login, returns JWT token | No |
-| `GET` | `/auth/me` | Get current user info | Yes |
+| `POST` | `/auth/register` | Register new user/organization | No |
+| `GET`  | `/auth/orgs` | List public organization names | No |
+| `POST` | `/auth/send-otp` | Send 6-digit OTP to email | No |
+| `POST` | `/auth/verify-otp` | Verify OTP (non-consuming check) | No |
+| `GET`  | `/auth/me` | Get current user info | Yes |
 
 ### Product Endpoints
 
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| `GET` | `/products` | List all products | Yes |
+| `GET` | `/products` | List products (paginated, searchable, filterable by category/supplier/region/country) | Yes |
 | `POST` | `/products` | Create new product | Yes (Admin/Manager) |
 | `GET` | `/products/:id` | Get product details | Yes |
-| `PUT` | `/products/:id` | Update product | Yes (Admin/Manager) |
-| `DELETE` | `/products/:id` | Delete product | Yes (Admin) |
+| `GET` | `/products/barcode/:code` | Look up product by barcode (Android scanner) | Yes |
+| `PUT` | `/products/:id` | Update product (auto-logs stock adjustment movement) | Yes (Admin/Manager) |
+| `DELETE` | `/products/:id` | Soft-delete product | Yes (Admin) |
 
 ### Stock Movement Endpoints
 
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| `GET` | `/stock-movements` | List all movements | Yes |
-| `POST` | `/stock-movements` | Create new movement | Yes |
-| `GET` | `/stock-movements/:id` | Get movement details | Yes |
+| `GET` | `/movements` | List movements (paginated) | Yes |
+| `POST` | `/movements` | Create new movement (IN / OUT / ADJUSTMENT) | Yes |
+
+### User Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `GET` | `/users` | List users in current tenant | Yes (Admin) |
+| `POST` | `/users` | Create user (enforces single-admin rule) | Yes (Admin) |
+| `DELETE` | `/users/:id` | Delete user | Yes (Admin) |
+| `PATCH` | `/users/:id/role` | Change role (enforces single-admin rule) | Yes (Admin) |
+| `PATCH` | `/users/:id/status` | Toggle active/inactive | Yes (Admin) |
+
+### Tenant Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `GET` | `/tenants` | List all tenants with live counts | Yes (Global Admin) |
+| `GET` | `/tenants/:id` | Get tenant details | Yes (Global Admin) |
+| `POST` | `/tenants` | Create tenant | Yes (Global Admin) |
+| `PUT` | `/tenants/:id` | Update tenant | Yes (Global Admin) |
+| `DELETE` | `/tenants/:id` | Delete tenant | Yes (Global Admin) |
 
 ### Report Endpoints
 
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| `GET` | `/reports/products` | Current stock report | Yes |
+| `GET` | `/reports/inventory` | Current stock report | Yes |
+| `GET` | `/reports/low-stock` | Items below reorder level | Yes |
 | `GET` | `/reports/movements` | Movement history report | Yes |
-| `GET` | `/reports/export/csv` | Export report as CSV | Yes |
+| `GET` | `/reports/valuation` | Stock valuation report | Yes |
 
 ### WebSocket
 
@@ -451,19 +567,25 @@ curl -X POST http://localhost:3000/api/products \
 ### ✅ Completed Features
 
 - [x] Backend API with Rust + Axum
-- [x] PostgreSQL database with migrations
-- [x] JWT authentication and RBAC
+- [x] PostgreSQL database with auto-migrations
+- [x] JWT authentication and role-based access control
 - [x] Web application with Svelte + Vite
-- [x] Real-time WebSocket synchronization
-- [x] Product management module
-- [x] Stock movement tracking
-- [x] Supplier management
-- [x] User management
-- [x] Dashboard with 6 KPIs
-- [x] Reports with CSV export
+- [x] Real-time WebSocket synchronization (< 100ms)
+- [x] Product management with SKU, barcode, unit of measure
+- [x] Stock movement tracking (IN / OUT / ADJUSTMENT) with audit log
+- [x] Supplier management with geography hierarchy
+- [x] Category management
+- [x] User management with single-admin-per-org rule
+- [x] Dashboard with 6 live KPIs
+- [x] Reports with CSV export (inventory, low-stock, movements, valuation)
 - [x] Glassmorphism UI design
-- [x] Tenant Switcher for global admins
-- [x] Dynamic organization registration
+- [x] Multi-tenant architecture with full data isolation
+- [x] Organization management (global admin)
+- [x] Tenant switcher — scoped to global admins only
+- [x] Dual-mode registration (New Organization / Join Existing)
+- [x] OTP email verification via Gmail SMTP (real-time check as user types)
+- [x] Single admin per organization — backend + frontend enforcement
+- [x] Tenant list query optimization via scalar subqueries
 
 ### 🚧 In Progress
 
@@ -555,6 +677,22 @@ psql -U postgres -c "CREATE DATABASE nexstock;"
 # Restart API (migrations auto-apply)
 cargo run -p api
 ```
+
+#### 5. OTP Email Not Arriving
+
+**Error**: `Email service is not configured` or `534: Application-specific password required`
+
+**Solution**:
+- Ensure all five `SMTP_*` variables are set in the **root** `.env` (not only `api/.env`)
+- Gmail requires an **App Password**, not your regular account password
+- Generate one at: Google Account → Security → 2-Step Verification → App passwords
+- App password is 16 characters with no spaces (e.g. `abcdwxyzefghijkl`)
+
+#### 6. Product Save Returns 422
+
+**Error**: HTTP 422 Unprocessable Entity when creating/editing a product
+
+**Solution**: Ensure `unit_of_measure` is always included in the request body (e.g. `"pcs"`). Optional UUID fields (`category_id`, `supplier_id`, `barcode`) must be sent as `null`, not as empty strings `""`.
 
 
 
@@ -663,9 +801,9 @@ For detailed project information, please refer to:
 
 ## 📈 Project Stats
 
-![Lines of Code](https://img.shields.io/badge/Lines%20of%20Code-8000%2B-blue)
-![API Endpoints](https://img.shields.io/badge/API%20Endpoints-25%2B-green)
-![Database Tables](https://img.shields.io/badge/Database%20Tables-6-orange)
+![Lines of Code](https://img.shields.io/badge/Lines%20of%20Code-10000%2B-blue)
+![API Endpoints](https://img.shields.io/badge/API%20Endpoints-35%2B-green)
+![Database Tables](https://img.shields.io/badge/Database%20Tables-9-orange)
 ![Test Coverage](https://img.shields.io/badge/Test%20Coverage-In%20Progress-yellow)
 
 ---
@@ -673,8 +811,6 @@ For detailed project information, please refer to:
 <div align="center">
 
 ### ⭐ Star this repo if you find it helpful!
-
-**Built with ❤️ using Rust, Svelte, and Vite**
 
 *MCA Final Year Project - 2026*
 
