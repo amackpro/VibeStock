@@ -23,8 +23,11 @@ pub struct RegisterRequest {
     pub password: String,
     #[validate(length(min = 1, max = 255))]
     pub full_name: String,
-    pub tenant_id: Option<Uuid>,
+    /// "new"  → create a fresh org (tenant_name required)
+    /// "join" → join an existing org as inactive staff (tenant_slug required)
+    pub mode: Option<String>,
     pub tenant_name: Option<String>,
+    pub tenant_slug: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -229,13 +232,4 @@ pub enum WsEvent {
     },
     LowStock {
         product_id: Uuid,
-        product_name: String,
-        quantity: i32,
-        reorder_level: i32,
-    },
-    NewMovement {
-        product_id: Uuid,
-        movement_type: String,
-        quantity: i32,
-    },
-}
+        product_nam

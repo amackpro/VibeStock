@@ -12,7 +12,8 @@ const routes = {
   '/suppliers': 'Suppliers',
   '/movements': 'Movements',
   '/users': 'Users',
-  '/reports': 'Reports'
+  '/reports': 'Reports',
+  '/tenants': 'Organizations'
 };
 
 export function navigate(path, params = {}) {
@@ -21,7 +22,4 @@ export function navigate(path, params = {}) {
 }
 
 export function getRouteName(path) {
-  return routes[path] || 'Unknown';
-}
-
-export { routes };
+  return routes[path] || 'U

@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store';
 
-const STORAGE_KEY = 'vibestock_auth';
+const STORAGE_KEY = 'nexstock_auth';
 
 function createAuthStore() {
   const stored = typeof localStorage !== 'undefined' 

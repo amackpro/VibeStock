@@ -26,7 +26,7 @@ use api::{
     config::Config,
     db,
     handlers::{
-        auth_handler::{health, login, register},
+        auth_handler::{health, list_orgs, login, register},
         categories::{create_category, delete_category, get_category, list_categories, update_category},
         dashboard::get_stats,
         geography::{
@@ -41,7 +41,7 @@ use api::{
         suppliers::{create_supplier, delete_supplier, get_supplier, list_suppliers, update_supplier},
         tenants::{create_tenant, delete_tenant, get_tenant, list_tenants, update_tenant},
         websocket::ws_handler,
-        users::{list_users, update_user_role, toggle_user_status},
+        users::{create_user, delete_user, list_users, update_user_role, toggle_user_status},
         reports::{get_inventory_report, get_low_stock_report, get_movements_report, get_valuation_report},
     },
     AppState, InnerState,
@@ -105,7 +105,8 @@ async fn main() -> anyhow::Result<()> {
         ));
 
     let admin_routes = Router::new()
-        .route("/users",             get(list_users))
+        .route("/users",             get(list_users).post(create_user))
+        .route("/users/:id",         delete(delete_user))
         .route("/users/:id/role",    patch(update_user_role))
         .route("/users/:id/status",  patch(toggle_user_status))
         .route("/tenants",           get(list_tenants).post(create_tenant))
@@ -137,6 +138,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/health",          get(health))
         .route("/auth/login",      post(login))
         .route("/auth/register",   post(register))
+        .route("/auth/orgs",       get(list_orgs))
         .route("/ws",              get(ws_handler))
         .route("/geography/regions",                  get(list_regions))
         .route("/geography/regions/:id/countries",    get(list_countries_by_region))
@@ -153,9 +155,4 @@ async fn main() -> anyhow::Result<()> {
         .with_state(state);
 
     let addr = config.server_addr();
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-    tracing::info!("🚀 VibeStock API running on http://{}", addr);
-
-    axum::serve(listener, app).await?;
-    Ok(())
-}
+    let listener = to

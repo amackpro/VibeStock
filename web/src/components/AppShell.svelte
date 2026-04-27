@@ -43,7 +43,8 @@
     { path: '/suppliers', icon: 'suppliers', label: 'Suppliers' },
     { path: '/movements', icon: 'movements', label: 'Movements' },
     { path: '/users', icon: 'users', label: 'Users' },
-    { path: '/reports', icon: 'reports', label: 'Reports' }
+    { path: '/reports', icon: 'reports', label: 'Reports' },
+    { path: '/tenants', icon: 'tenants', label: 'Organizations', globalAdminOnly: true }
   ];
 
   function handleNav(path) {
@@ -152,13 +153,13 @@
           </defs>
         </svg>
       </div>
-      <span class="logo-text">VibeStock</span>
+      <span class="logo-text">NexStock</span>
     </div>
 
     <nav class="nav-menu">
-      {#each menuItems as item, i}
-        <button 
-          class="nav-item nav-item-{i}" 
+      {#each menuItems.filter(m => !m.globalAdminOnly || user?.is_global_admin) as item, i}
+        <button
+          class="nav-item nav-item-{i}"
           class:active={currentPath === item.path}
           on:click={() => handleNav(item.path)}
           on:mouseenter={() => handleMouseEnter(i)}
@@ -200,6 +201,11 @@
             {:else if item.icon === 'reports'}
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 20V10M12 20V4M6 20v-6"/>
+              </svg>
+            {:else if item.icon === 'tenants'}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
               </svg>
             {/if}
           </span>
@@ -596,33 +602,4 @@
     text-align: left;
   }
 
-  .tenant-option:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-primary);
-  }
-
-  .tenant-option.active {
-    background: rgba(99, 102, 241, 0.1);
-    color: var(--accent-primary);
-  }
-
-  .tenant-option-info {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .t-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-  }
-
-  .t-slug {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
-
-  .main-content {
-    flex: 1;
-    padding: 32px;
-  }
-</style>
+  .tenant-option:hover

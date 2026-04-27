@@ -2,8 +2,10 @@ use axum::{
     extract::{Extension, Path, State},
     Json,
 };
+use bcrypt::hash;
 use serde::Deserialize;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{auth::Claims, AppState};
 use shared::{AppError, AppResult, User};
@@ -162,3 +164,153 @@ pub async fn toggle_user_status(
 
     Ok(Json(user))
 }
+
+/// Request body for admin-created users
+#[derive(serde::Deserialize, validator::Validate)]
+pub struct AdminCreateUserRequest {
+    #[validate(length(min = 3, max = 50))]
+    pub username: String,
+    #[validate(email)]
+    pub email: String,
+    #[validate(length(min = 6))]
+    pub password: String,
+    #[validate(length(min = 1, max = 255))]
+    pub full_name: String,
+    /// One of: "admin", "manager", "staff"  (defaults to "staff")
+    pub role: Option<String>,
+}
+
+/// POST /api/users
+/// Admin-only: create a new user inside the same tenant as the calling admin.
+pub async fn create_user(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Extension(tenant_id): Extension<Uuid>,
+    Json(payload): Json<AdminCreateUserRequest>,
+) -> AppResult<Json<serde_json::Value>> {
+    require_admin(&claims)?;
+
+    if let Err(e) = payload.validate() {
+        return Err(AppError::BadRequest(format!("Validation error: {}", e)));
+    }
+
+    let role_str = payload.role.as_deref().unwrap_or("staff").to_lowercase();
+    let valid_roles = ["admin", "manager", "staff"];
+    if !valid_roles.contains(&role_str.as_str()) {
+        return Err(AppError::BadRequest(
+            "Invalid role. Must be one of: admin, manager, staff".into(),
+        ));
+    }
+
+    let exists: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM users WHERE username = $1 OR email = $2"
+    )
+    .bind(&payload.username)
+    .bind(&payload.email)
+    .fetch_one(&state.db)
+    .await?;
+
+    if exists > 0 {
+        return Err(AppError::Conflict("Username or email already exists".into()));
+    }
+
+    let password_hash = hash(&payload.password, bcrypt::DEFAULT_COST)
+        .map_err(|e| AppError::Internal(format!("Hashing failed: {}", e)))?;
+
+    let user_id = Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO users (id, tenant_id, username, email, password_hash, full_name, role) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7::user_role)"
+    )
+    .bind(user_id)
+    .bind(tenant_id)
+    .bind(&payload.username)
+    .bind(&payload.email)
+    .bind(&password_hash)
+    .bind(&payload.full_name)
+    .bind(&role_str)
+    .execute(&state.db)
+    .await?;
+
+    Ok(Json(serde_json::json!({
+        "message": "User created successfully",
+        "user_id": user_id,
+        "tenant_id": tenant_id,
+        "role": role_str
+    })))
+}
+
+/// DELETE /api/users/:id
+/// Tenant admin: remove a user from their own org (with safety guards).
+/// Global admin: remove any user from any org.
+pub async fn delete_user(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Extension(tenant_id): Extension<Uuid>,
+    Path(target_id): Path<Uuid>,
+) -> AppResult<Json<serde_json::Value>> {
+    require_admin(&claims)?;
+
+    // Guard 1: cannot delete yourself
+    if target_id == claims.sub {
+        return Err(AppError::BadRequest(
+            "You cannot delete your own account.".into(),
+        ));
+    }
+
+    // Fetch the target user to validate ownership and role
+    #[derive(sqlx::FromRow)]
+    struct TargetUser {
+        tenant_id: Uuid,
+        is_global_admin: bool,
+        role: Option<String>,
+    }
+
+    let target = sqlx::query_as::<_, TargetUser>(
+        "SELECT tenant_id, is_global_admin, role::text AS role FROM users WHERE id = $1"
+    )
+    .bind(target_id)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| AppError::NotFound("User not found".into()))?;
+
+    // Guard 2: tenant admins can only delete users in their own org
+    if !claims.is_global_admin && target.tenant_id != tenant_id {
+        return Err(AppError::Unauthorized(
+            "You can only remove users from your own organization.".into(),
+        ));
+    }
+
+    // Guard 3: nobody can delete a global admin (except another global admin — future use)
+    if target.is_global_admin && !claims.is_global_admin {
+        return Err(AppError::Unauthorized(
+            "Global admin accounts cannot be deleted.".into(),
+        ));
+    }
+
+    // Guard 4: cannot remove the last admin of a tenant
+    let role_str = target.role.as_deref().unwrap_or("staff");
+    if role_str == "admin" {
+        let admin_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM users \
+             WHERE tenant_id = $1 AND role = 'admin'::user_role AND is_active = true AND id != $2"
+        )
+        .bind(target.tenant_id)
+        .bind(target_id)
+        .fetch_one(&state.db)
+        .await?;
+
+        if admin_count == 0 {
+            return Err(AppError::BadRequest(
+                "Cannot delete the last admin of an organization. \
+                 Promote another user to admin first.".into(),
+            ));
+        }
+    }
+
+    sqlx::query("DELETE FROM users WHERE id = $1")
+        .bind(target_id)
+        .execute(&state.db)
+        .await?;
+
+    Ok(Json(serde_json::json!({ "me

@@ -66,34 +66,37 @@
     }
   }
 
+  let confirmDelete = null; // holds the user object pending confirmation
+
+  async function handleDeleteUser(user) {
+    try {
+      await api.users.delete(user.id);
+      toastStore.show(`User "${user.username}" removed successfully`, 'success');
+      confirmDelete = null;
+      await loadUsers();
+    } catch (e) {
+      toastStore.show(e.message || 'Failed to delete user', 'error');
+      confirmDelete = null;
+    }
+  }
+
   let showAddModal = false;
   let newUserData = {
     username: '',
     email: '',
     full_name: '',
-    password: ''
+    password: '',
+    role: 'staff'
   };
 
   async function handleAddUser() {
     try {
-      // Add tenant_id from currentUser so they belong to the same organization
-      const payload = {
-        ...newUserData,
-        tenant_id: currentUser.tenant_id || currentUser.tenant?.id || authStore.tenant?.id // Try to get the tenant id
-      };
-      
-      // If we don't have tenant_id in the user object directly, we can get it from the store
-      let authState;
-      authStore.subscribe(s => authState = s)();
-      
-      if (!payload.tenant_id && authState?.tenant?.id) {
-        payload.tenant_id = authState.tenant.id;
-      }
-
-      await api.auth.register(payload);
+      // Use the dedicated admin endpoint — it automatically scopes the new user
+      // to the calling admin's tenant. No tenant_id juggling needed.
+      await api.users.create(newUserData);
       toastStore.show('User added successfully', 'success');
       showAddModal = false;
-      newUserData = { username: '', email: '', full_name: '', password: '' };
+      newUserData = { username: '', email: '', full_name: '', password: '', role: 'staff' };
       await loadUsers();
     } catch (e) {
       toastStore.show(e.message || 'Failed to add user', 'error');
@@ -172,8 +175,8 @@
             <div class="detail-row">
               <span class="detail-label">Status</span>
               {#if currentUser?.role === 'admin' && user.id !== currentUser?.id}
-                <button 
-                  class="status-toggle" 
+                <button
+                  class="status-toggle"
                   class:active={user.is_active}
                   on:click={() => toggleStatus(user.id, !user.is_active)}
                 >
@@ -185,6 +188,21 @@
                 </span>
               {/if}
             </div>
+
+            {#if currentUser?.role === 'admin' && user.id !== currentUser?.id && !user.is_global_admin}
+              <div class="detail-row" style="margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                <span class="detail-label" style="color: var(--accent-danger); font-size: 0.8rem;">Danger Zone</span>
+                <button class="delete-btn" on:click={() => confirmDelete = user}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                    <path d="M10 11v6M14 11v6"></path>
+                    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
+                  </svg>
+                  Remove User
+                </button>
+              </div>
+            {/if}
           </div>
         </div>
       {/each}
@@ -220,12 +238,48 @@
           <label for="password">Password</label>
           <input type="password" id="password" bind:value={newUserData.password} required minlength="6" />
         </div>
-        
+
+        <div class="form-group">
+          <label for="new_user_role">Role</label>
+          <select id="new_user_role" bind:value={newUserData.role} class="role-select-modal">
+            {#each roles as role}
+              <option value={role} style="text-transform: capitalize;">{role.charAt(0).toUpperCase() + role.slice(1)}</option>
+            {/each}
+          </select>
+        </div>
+
         <div class="modal-actions">
           <button type="button" class="btn-cancel" on:click={() => showAddModal = false}>Cancel</button>
           <button type="submit" class="btn-submit">Add User</button>
         </div>
       </form>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete confirmation modal -->
+{#if confirmDelete}
+  <div class="modal-backdrop" on:click={() => confirmDelete = null}>
+    <div class="modal confirm-modal" on:click|stopPropagation>
+      <div class="modal-header">
+        <h3>Remove User</h3>
+        <button class="close-btn" on:click={() => confirmDelete = null}>&times;</button>
+      </div>
+      <div class="confirm-body">
+        <div class="confirm-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <p>Are you sure you want to permanently remove <strong>{confirmDelete.username}</strong> from your organization?</p>
+        <p class="confirm-warning">This action cannot be undone. All activity by this user will remain in the audit log.</p>
+      </div>
+      <div class="modal-actions" style="padding: 0 24px 24px;">
+        <button class="btn-cancel" on:click={() => confirmDelete = null}>Cancel</button>
+        <button class="btn-delete" on:click={() => handleDeleteUser(confirmDelete)}>Yes, Remove User</button>
+      </div>
     </div>
   </div>
 {/if}
@@ -417,7 +471,27 @@
     color: var(--accent-success);
   }
 
-  /* Modal Styles */
+  .delete-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-danger);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .delete-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: var(--accent-danger);
+  }
+
+  /* Modal shared styles */
   .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -499,13 +573,30 @@
     border-color: var(--accent-primary);
   }
 
+  .role-select-modal {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color var(--transition-fast);
+  }
+
+  .role-select-modal:focus {
+    border-color: var(--accent-primary);
+  }
+
   .modal-actions {
     display: flex;
     gap: 12px;
     margin-top: 8px;
   }
 
-  .btn-cancel, .btn-submit {
+  .btn-cancel, .btn-submit, .btn-delete {
     flex: 1;
     padding: 10px;
     border-radius: var(--radius-md);
@@ -533,14 +624,61 @@
     background: var(--accent-secondary);
   }
 
+  .btn-delete {
+    background: var(--accent-danger);
+    color: white;
+  }
+
+  .btn-delete:hover {
+    opacity: 0.85;
+  }
+
+  /* Confirm modal */
+  .confirm-modal {
+    max-width: 420px;
+  }
+
+  .confirm-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .confirm-icon {
+    color: var(--accent-danger);
+    margin-bottom: 4px;
+  }
+
+  .confirm-body p {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .confirm-warning {
+    color: var(--text-muted) !important;
+    font-size: 0.82rem !important;
+    font-style: italic;
+  }
+
   @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 </style>

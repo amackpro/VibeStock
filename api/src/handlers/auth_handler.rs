@@ -108,50 +108,33 @@ pub async fn register(
         return Err(AppError::Conflict("Username or email already exists".into()));
     }
 
-    let (tenant_id, role_to_assign) = if let Some(tid) = payload.tenant_id {
-        (tid, "staff")
-    } else if let Some(ref tenant_name) = payload.tenant_name {
-        let slug = tenant_name.to_lowercase().replace(' ', "-");
-        let tid = Uuid::new_v4();
-        sqlx::query(
-            "INSERT INTO tenants (id, name, slug) VALUES ($1, $2, $3)"
-        )
-        .bind(tid)
-        .bind(tenant_name)
-        .bind(&slug)
-        .execute(&state.db)
-        .await?;
-        (tid, "admin")
-    } else {
-        return Err(AppError::BadRequest("Either tenant_id or tenant_name is required".into()));
-    };
+    let mode = payload.mode.as_deref().unwrap_or("new");
 
-    let hash = hash(&payload.password, DEFAULT_COST)
-        .map_err(|e| AppError::Internal(format!("Hashing failed: {}", e)))?;
+    let (tenant_id, role_to_assign, is_active) = match mode {
+        // ── JOIN EXISTING ────────────────────────────────────────────────────
+        "join" => {
+            let slug = payload.tenant_slug.as_deref().ok_or_else(|| {
+                AppError::BadRequest("tenant_slug is required when joining an organization.".into())
+            })?;
 
-    let id = Uuid::new_v4();
-    sqlx::query(
-        "INSERT INTO users (id, tenant_id, username, email, password_hash, full_name, role) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7::user_role)"
-    )
-    .bind(id)
-    .bind(tenant_id)
-    .bind(&payload.username)
-    .bind(&payload.email)
-    .bind(hash)
-    .bind(&payload.full_name)
-    .bind(role_to_assign)
-    .execute(&state.db)
-    .await?;
+            #[derive(sqlx::FromRow)]
+            struct TenantRow { id: Uuid }
 
-    Ok(Json(serde_json::json!({ "message": "User registered successfully", "user_id": id, "tenant_id": tenant_id })))
-}
+            let tenant = sqlx::query_as::<_, TenantRow>(
+                "SELECT id FROM tenants WHERE slug = $1 AND is_active = true"
+            )
+            .bind(slug)
+            .fetch_optional(&state.db)
+            .await?
+            .ok_or_else(|| AppError::NotFound(
+                "No active organization found with that name. Check the name and try again.".into()
+            ))?;
 
-/// GET /api/health
-pub async fn health() -> Json<serde_json::Value> {
-    Json(serde_json::json!({
-        "status":  "ok",
-        "service": "VibeStock API",
-        "version": "0.1.0"
-    }))
-}
+            // Join as inactive staff — the org admin must activate the account
+            (tenant.id, "staff", false)
+        }
+
+        // ── CREATE NEW ───────────────────────────────────────────────────────
+        _ => {
+            let tenant_name = payload.tenant_name.as_deref().ok_or_else(|| {
+                AppError::BadRequest("Organization nam

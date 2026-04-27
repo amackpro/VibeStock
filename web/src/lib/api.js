@@ -1,5 +1,5 @@
 /**
- * api.js — VibeStock API Client
+ * api.js — NexStock API Client
  */
 
 import { get } from 'svelte/store';
@@ -58,6 +58,7 @@ export const api = {
   auth: {
     login:    (creds) => request('POST', '/auth/login',    creds),
     register: (data)  => request('POST', '/auth/register', data),
+    orgs:     ()      => request('GET',  '/auth/orgs'),
   },
 
   dashboard: {
@@ -93,9 +94,11 @@ export const api = {
   },
 
   users: {
-    list:         ()         => request('GET', '/users'),
-    updateRole:   (id, role) => request('PATCH', `/users/${id}/role`, { role }),
-    toggleStatus: (id, state) => request('PATCH', `/users/${id}/status`, { is_active: state }),
+    list:         ()           => request('GET', '/users'),
+    create:       (data)       => request('POST', '/users', data),
+    delete:       (id)         => request('DELETE', `/users/${id}`),
+    updateRole:   (id, role)   => request('PATCH', `/users/${id}/role`, { role }),
+    toggleStatus: (id, active) => request('PATCH', `/users/${id}/status`, { is_active: active }),
   },
 
   tenants: {
@@ -138,12 +141,4 @@ export function openWebSocket(onMessage) {
   const ws = new WebSocket(wsUrl);
 
   ws.onopen    = () => console.info('[WS] Connected');
-  ws.onclose   = () => console.info('[WS] Closed');
-  ws.onerror   = (e) => console.error('[WS] Error', e);
-  ws.onmessage = (ev) => {
-    try { onMessage(JSON.parse(ev.data)); }
-    catch {}
-  };
-
-  return ws;
-}
+  ws.onclose   

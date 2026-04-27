@@ -1,10 +1,10 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Extension, Path, State},
     Json,
 };
 use uuid::Uuid;
 
-use crate::AppState;
+use crate::{auth::Claims, AppState};
 use shared::{
     AppError, AppResult, CreateTenantRequest, Tenant, TenantWithStats, UpdateTenantRequest,
 };
@@ -13,16 +13,12 @@ pub async fn list_tenants(
     State(state): State<AppState>,
 ) -> AppResult<Json<Vec<TenantWithStats>>> {
     let tenants = sqlx::query_as::<_, TenantWithStats>(
-        "SELECT 
+        "SELECT
             t.id, t.name, t.slug, t.owner_user_id, t.is_active, t.created_at,
-            COUNT(DISTINCT u.id) as total_users,
-            COUNT(DISTINCT p.id) as total_products,
-            COUNT(DISTINCT s.id) as total_suppliers
+            (SELECT COUNT(*) FROM users     WHERE tenant_id = t.id) AS total_users,
+            (SELECT COUNT(*) FROM products  WHERE tenant_id = t.id) AS total_products,
+            (SELECT COUNT(*) FROM suppliers WHERE tenant_id = t.id) AS total_suppliers
          FROM tenants t
-         LEFT JOIN users u ON u.tenant_id = t.id
-         LEFT JOIN products p ON p.tenant_id = t.id
-         LEFT JOIN suppliers s ON s.tenant_id = t.id
-         GROUP BY t.id
          ORDER BY t.created_at DESC"
     )
     .fetch_all(&state.db)
@@ -35,17 +31,13 @@ pub async fn get_tenant(
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<TenantWithStats>> {
     let tenant = sqlx::query_as::<_, TenantWithStats>(
-        "SELECT 
+        "SELECT
             t.id, t.name, t.slug, t.owner_user_id, t.is_active, t.created_at,
-            COUNT(DISTINCT u.id) as total_users,
-            COUNT(DISTINCT p.id) as total_products,
-            COUNT(DISTINCT s.id) as total_suppliers
+            (SELECT COUNT(*) FROM users     WHERE tenant_id = t.id) AS total_users,
+            (SELECT COUNT(*) FROM products  WHERE tenant_id = t.id) AS total_products,
+            (SELECT COUNT(*) FROM suppliers WHERE tenant_id = t.id) AS total_suppliers
          FROM tenants t
-         LEFT JOIN users u ON u.tenant_id = t.id
-         LEFT JOIN products p ON p.tenant_id = t.id
-         LEFT JOIN suppliers s ON s.tenant_id = t.id
-         WHERE t.id = $1
-         GROUP BY t.id"
+         WHERE t.id = $1"
     )
     .bind(id)
     .fetch_optional(&state.db)
@@ -97,8 +89,17 @@ pub async fn update_tenant(
 
 pub async fn delete_tenant(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<serde_json::Value>> {
+    // Only the global admin (superuser) may delete an entire organization.
+    // A tenant admin can manage users inside their org but cannot wipe the org itself.
+    if !claims.is_global_admin {
+        return Err(AppError::Unauthorized(
+            "Only the global admin can delete an organization.".into(),
+        ));
+    }
+
     let rows = sqlx::query("DELETE FROM tenants WHERE id = $1")
         .bind(id)
         .execute(&state.db)
@@ -116,12 +117,4 @@ pub async fn get_tenant_by_slug(
     Path(slug): Path<String>,
 ) -> AppResult<Json<Tenant>> {
     let tenant = sqlx::query_as::<_, Tenant>(
-        "SELECT id, name, slug, owner_user_id, is_active, created_at, updated_at \
-         FROM tenants WHERE slug = $1"
-    )
-    .bind(slug)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("Tenant not found".to_string()))?;
-    Ok(Json(tenant))
-}
+        "SELECT id, name, slu

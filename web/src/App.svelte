@@ -14,6 +14,7 @@
   import Movements from './routes/Movements.svelte';
   import Users from './routes/Users.svelte';
   import Reports from './routes/Reports.svelte';
+  import Tenants from './routes/Tenants.svelte';
   import AppShell from './components/AppShell.svelte';
   import Toast from './components/Toast.svelte';
 
@@ -62,8 +63,4 @@
       <Users />
     {:else if route === '/reports'}
       <Reports />
-    {/if}
-  </AppShell>
-{:else}
-  <Login />
-{/if}
+ 

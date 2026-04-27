@@ -90,6 +90,7 @@
         username: response.username,
         full_name: response.full_name,
         role: response.role,
+        tenant_id: response.tenant_id,
         is_global_admin: response.is_global_admin
       };
       const tenant = response.accessible_tenants?.length > 0 
@@ -138,7 +139,7 @@
             </defs>
           </svg>
         </div>
-        <span class="logo-text">VibeStock</span>
+        <span class="logo-text">NexStock</span>
       </div>
       
       <h1 class="login-title">Welcome back</h1>
@@ -484,6 +485,4 @@
   }
 
   .register-link a:hover {
-    color: var(--accent-secondary);
-  }
-</style>
+    color:
