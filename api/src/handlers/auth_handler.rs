@@ -1,4 +1,5 @@
-use axum::{extract::State, Json};
+use axum::{extract::{Query, State}, Json};
+use serde::Deserialize;
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::Utc;
 use lettre::{
@@ -108,6 +109,20 @@ pub async fn send_otp(
     if !state.config.smtp_enabled() {
         return Err(AppError::Internal(
             "Email service is not configured on this server.".into(),
+        ));
+    }
+
+    // Block if email already registered (exclude orphaned users with NULL tenant_id)
+    let already_registered: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE email = $1 AND tenant_id IS NOT NULL)"
+    )
+    .bind(payload.email.trim())
+    .fetch_one(&state.db)
+    .await?;
+
+    if already_registered {
+        return Err(AppError::Conflict(
+            "This email address is already registered. Please log in instead.".into(),
         ));
     }
 
@@ -285,9 +300,9 @@ pub async fn register(
             .ok();
     }
 
-    // ── Duplicate check ───────────────────────────────────────────────────────
+    // ── Duplicate check (exclude orphaned users whose tenant was deleted) ────────
     let exists: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM users WHERE username = $1 OR email = $2"
+        "SELECT COUNT(*) FROM users WHERE (username = $1 OR email = $2) AND tenant_id IS NOT NULL"
     )
     .bind(&payload.username)
     .bind(&payload.email)
@@ -423,4 +438,44 @@ pub async fn health() -> Json<serde_json::Value> {
         "service": "NexStock API",
         "version": "0.1.0"
     }))
+}
+
+// ─── Live availability checks ─────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct EmailQuery { pub email: String }
+
+/// GET /api/auth/check-email?email=xxx
+/// Returns { available: bool } — excludes orphaned users (tenant_id IS NOT NULL).
+pub async fn check_email(
+    State(state): State<AppState>,
+    Query(q): Query<EmailQuery>,
+) -> AppResult<Json<serde_json::Value>> {
+    let taken: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE email = $1 AND tenant_id IS NOT NULL)"
+    )
+    .bind(q.email.trim())
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(serde_json::json!({ "available": !taken })))
+}
+
+#[derive(Deserialize)]
+pub struct UsernameQuery { pub username: String }
+
+/// GET /api/auth/check-username?username=xxx
+/// Returns { available: bool } — excludes orphaned users (tenant_id IS NOT NULL).
+pub async fn check_username(
+    State(state): State<AppState>,
+    Query(q): Query<UsernameQuery>,
+) -> AppResult<Json<serde_json::Value>> {
+    let taken: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND tenant_id IS NOT NULL)"
+    )
+    .bind(q.username.trim())
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(serde_json::json!({ "available": !taken })))
 }

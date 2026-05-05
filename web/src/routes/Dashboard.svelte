@@ -23,8 +23,8 @@
   let kpiRefs = [];
 
   onMount(async () => {
-    await loadStats();
     initChart();
+    await loadStats();
     connectWebSocket();
     animateEntrance();
   });
@@ -38,35 +38,39 @@
     try {
       const data = await api.dashboard.stats();
       stats = data;
-      updateChartsWithData();
-      animateNumbers();
     } catch (e) {
       toastStore.show('Failed to load dashboard', 'error');
     } finally {
       loading = false;
     }
+    // Run UI updates outside the catch so a rendering glitch
+    // doesn't falsely trigger the "failed to load" toast
+    updateChartsWithData();
+    animateNumbers();
   }
 
   function updateChartsWithData() {
-    if (!chart || !stats.recent_activity) return;
+    if (!chart) return;
 
-    // Group movements by last 7 days for the chart
-    const labels = [];
+    // Build the last 7 calendar days as keys (YYYY-MM-DD) and labels (Mon, Tue…)
     const now = new Date();
+    const dayKeys = [];
+    const labels = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+      dayKeys.push(key);
       labels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
     }
 
-    const dayData = new Array(7).fill(0);
-    stats.recent_activity.forEach(m => {
-      const mDate = new Date(m.created_at);
-      const diffDays = Math.floor((now - mDate) / (1000 * 60 * 60 * 24));
-      if (diffDays >= 0 && diffDays < 7) {
-        dayData[6 - diffDays] += m.quantity;
-      }
+    // Index the backend aggregation by date
+    const byDay = {};
+    (stats.movements_by_day || []).forEach(row => {
+      byDay[row.day] = Number(row.total_quantity);
     });
+
+    const dayData = dayKeys.map(k => byDay[k] ?? 0);
 
     chart.data.labels = labels;
     chart.data.datasets[0].data = dayData;

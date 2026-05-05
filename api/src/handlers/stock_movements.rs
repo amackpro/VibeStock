@@ -37,11 +37,11 @@ pub async fn list_movements(
                 sm.reference,
                 sm.notes,
                 sm.performed_by,
-                u.full_name   AS performed_by_name,
+                COALESCE(u.full_name, 'Deleted User') AS performed_by_name,
                 sm.created_at
          FROM stock_movements sm
          JOIN products p ON p.id = sm.product_id
-         JOIN users u    ON u.id = sm.performed_by
+         LEFT JOIN users u ON u.id = sm.performed_by
          WHERE sm.tenant_id = $1
          ORDER BY sm.created_at DESC
          LIMIT $2 OFFSET $3"

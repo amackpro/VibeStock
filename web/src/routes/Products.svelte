@@ -17,7 +17,7 @@
 
   let selectedRegion = 'Asia';
   let selectedCountry = '';
-  let selectedCategory = 'Electronics';
+  let selectedCategory = '';
   
   let form = {
     sku: '',
@@ -32,7 +32,8 @@
   };
 
   onMount(async () => {
-    await Promise.all([loadFilters(), loadProducts()]);
+    await loadFilters();
+    await loadProducts();
     animateEntrance();
   });
 
@@ -57,10 +58,7 @@
         }
       }
 
-      const electronics = categories.find(c => c.name === 'Electronics');
-      if (electronics) {
-        selectedCategory = electronics.name;
-      }
+      // No default category — show All Categories
     } catch (e) {
       console.error('Failed to load filters', e);
     }

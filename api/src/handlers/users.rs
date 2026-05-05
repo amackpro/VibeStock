@@ -241,7 +241,7 @@ pub async fn create_user(
     }
 
     let exists: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM users WHERE username = $1 OR email = $2"
+        "SELECT COUNT(*) FROM users WHERE (username = $1 OR email = $2) AND tenant_id IS NOT NULL"
     )
     .bind(&payload.username)
     .bind(&payload.email)
@@ -299,7 +299,7 @@ pub async fn delete_user(
     // Fetch the target user to validate ownership and role
     #[derive(sqlx::FromRow)]
     struct TargetUser {
-        tenant_id: Uuid,
+        tenant_id: Option<Uuid>,
         is_global_admin: bool,
         role: Option<String>,
     }
@@ -313,22 +313,25 @@ pub async fn delete_user(
     .ok_or_else(|| AppError::NotFound("User not found".into()))?;
 
     // Guard 2: tenant admins can only delete users in their own org
-    if !claims.is_global_admin && target.tenant_id != tenant_id {
-        return Err(AppError::Unauthorized(
-            "You can only remove users from your own organization.".into(),
-        ));
+    if !claims.is_global_admin {
+        match target.tenant_id {
+            Some(tid) if tid == tenant_id => {}
+            _ => return Err(AppError::Unauthorized(
+                "You can only remove users from your own organization.".into(),
+            )),
+        }
     }
 
-    // Guard 3: nobody can delete a global admin (except another global admin — future use)
+    // Guard 3: nobody can delete a global admin (except another global admin)
     if target.is_global_admin && !claims.is_global_admin {
         return Err(AppError::Unauthorized(
             "Global admin accounts cannot be deleted.".into(),
         ));
     }
 
-    // Guard 4: cannot remove the last admin of a tenant
+    // Guard 4: cannot remove the last admin of a tenant (global admin bypasses this)
     let role_str = target.role.as_deref().unwrap_or("staff");
-    if role_str == "admin" {
+    if role_str == "admin" && !claims.is_global_admin {
         let admin_count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM users \
              WHERE tenant_id = $1 AND role = 'admin'::user_role AND is_active = true AND id != $2"

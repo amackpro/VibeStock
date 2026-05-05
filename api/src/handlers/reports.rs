@@ -323,7 +323,7 @@ pub async fn get_movements_report(
     ];
     let mut param_idx = 4;
 
-    let mut joins = String::from("JOIN products p ON m.product_id = p.id\n         JOIN users u ON m.performed_by = u.id\n         LEFT JOIN categories c ON p.category_id = c.id\n         LEFT JOIN suppliers s ON p.supplier_id = s.id\n         LEFT JOIN cities ci ON s.city_id = ci.id\n         LEFT JOIN countries co ON ci.country_id = co.id\n         LEFT JOIN regions r ON co.region_id = r.id");
+    let mut joins = String::from("JOIN products p ON m.product_id = p.id\n         LEFT JOIN users u ON m.performed_by = u.id\n         LEFT JOIN categories c ON p.category_id = c.id\n         LEFT JOIN suppliers s ON p.supplier_id = s.id\n         LEFT JOIN cities ci ON s.city_id = ci.id\n         LEFT JOIN countries co ON ci.country_id = co.id\n         LEFT JOIN regions r ON co.region_id = r.id");
 
     if let Some(ref region) = params.region {
         if !region.is_empty() {
@@ -349,7 +349,8 @@ pub async fn get_movements_report(
     let sql = format!(
         "SELECT m.id, m.tenant_id, m.product_id, p.name as product_name, p.sku as product_sku,
                 m.movement_type::text as movement_type, m.quantity, m.reference, m.notes,
-                m.performed_by, u.full_name as performed_by_name, m.created_at
+                m.performed_by, COALESCE(u.full_name, 'Deleted User') as performed_by_name,
+                m.created_at
          FROM stock_movements m
          {}
          WHERE {}

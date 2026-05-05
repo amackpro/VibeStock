@@ -86,8 +86,8 @@ pub async fn create_supplier(
     tracing::debug!("Creating supplier: tenant_id={}, payload={:?}", tenant_id, payload);
     let id = Uuid::new_v4();
     sqlx::query(
-        "INSERT INTO suppliers (id, tenant_id, name, contact_name, email, phone, address) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7)"
+        "INSERT INTO suppliers (id, tenant_id, name, contact_name, email, phone, address, city_id) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
     )
     .bind(id)
     .bind(tenant_id)
@@ -96,6 +96,7 @@ pub async fn create_supplier(
     .bind(&payload.email)
     .bind(&payload.phone)
     .bind(&payload.address)
+    .bind(&payload.city_id)
     .execute(&state.db)
     .await?;
     Ok(Json(serde_json::json!({ "message": "Supplier created", "id": id })))

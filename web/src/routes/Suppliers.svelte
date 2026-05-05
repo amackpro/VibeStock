@@ -13,20 +13,28 @@
   let searchQuery = '';
   let showModal = false;
   let editingSupplier = null;
-  
+
   let selectedRegion = 'Asia';
   let selectedCountry = '';
-  
+
+  // Modal form geography state (separate from filter bar)
+  let formRegions   = [];
+  let formCountries = [];
+  let formCities    = [];
+  let formRegionId  = '';
+  let formCountryId = '';
+
   let form = {
     name: '',
     contact_name: '',
     email: '',
     phone: '',
-    address: ''
+    city_id: null,
   };
 
   onMount(async () => {
-    await Promise.all([loadFilters(), loadSuppliers()]);
+    await loadFilters();
+    await loadSuppliers();
     animateEntrance();
   });
 
@@ -108,24 +116,45 @@
     );
   }
 
-  function openModal(supplier = null) {
+  async function openModal(supplier = null) {
     editingSupplier = supplier;
+    // Load regions for the form cascade (if not already loaded)
+    if (formRegions.length === 0) {
+      try {
+        const r = await api.geography.regions();
+        formRegions = r.data || r;
+      } catch (_) {}
+    }
+    formCountries = [];
+    formCities    = [];
+    formRegionId  = '';
+    formCountryId = '';
+
     if (supplier) {
-      form = { 
-        name: supplier.name || '',
-        contact_name: supplier.contact_name || '',
-        email: supplier.email || '',
-        phone: supplier.phone || '',
-        address: supplier.address || ''
-      };
-    } else {
       form = {
-        name: '',
-        contact_name: '',
-        email: '',
-        phone: '',
-        address: ''
+        name:         supplier.name         || '',
+        contact_name: supplier.contact_name || '',
+        email:        supplier.email        || '',
+        phone:        supplier.phone        || '',
+        city_id:      supplier.city_id      || null,
       };
+      // Pre-populate cascade if the supplier already has a city
+      if (supplier.region_id) {
+        formRegionId = supplier.region_id;
+        try {
+          const c = await api.geography.countriesByRegion(supplier.region_id);
+          formCountries = c.data || c;
+        } catch (_) {}
+      }
+      if (supplier.country_id) {
+        formCountryId = supplier.country_id;
+        try {
+          const ci = await api.geography.citiesByCountry(supplier.country_id);
+          formCities = ci.data || ci;
+        } catch (_) {}
+      }
+    } else {
+      form = { name: '', contact_name: '', email: '', phone: '', city_id: null };
     }
     showModal = true;
   }
@@ -135,13 +164,38 @@
     editingSupplier = null;
   }
 
+  async function onFormRegionChange() {
+    formCountries = [];
+    formCities    = [];
+    formCountryId = '';
+    form.city_id  = null;
+    if (!formRegionId) return;
+    try {
+      const c = await api.geography.countriesByRegion(formRegionId);
+      formCountries = c.data || c;
+    } catch (_) {}
+  }
+
+  async function onFormCountryChange() {
+    formCities   = [];
+    form.city_id = null;
+    if (!formCountryId) return;
+    try {
+      const ci = await api.geography.citiesByCountry(formCountryId);
+      formCities = ci.data || ci;
+    } catch (_) {}
+  }
+
   async function saveSupplier() {
     try {
-      const payload = { ...form };
-      
-      if (!payload.email) payload.email = null;
-      if (!payload.phone) payload.phone = null;
-      if (!payload.address) payload.address = null;
+      const payload = {
+        name:         form.name         || null,
+        contact_name: form.contact_name || null,
+        email:        form.email        || null,
+        phone:        form.phone        || null,
+        address:      null,
+        city_id:      form.city_id      || null,
+      };
 
       if (editingSupplier) {
         await api.suppliers.update(editingSupplier.id, payload);
@@ -276,13 +330,15 @@
                 <span>{supplier.phone}</span>
               </div>
             {/if}
-            {#if supplier.address}
+            {#if supplier.city_name || supplier.country_name}
               <div class="detail-item">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
                   <circle cx="12" cy="10" r="3"/>
                 </svg>
-                <span>{supplier.address}</span>
+                <span>
+                  {[supplier.city_name, supplier.country_name].filter(Boolean).join(', ')}
+                </span>
               </div>
             {/if}
           </div>
@@ -341,9 +397,38 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Address</label>
-          <textarea class="input-field textarea" bind:value={form.address} rows="3"></textarea>
+          <label class="form-label">Region</label>
+          <select class="input-field" bind:value={formRegionId} on:change={onFormRegionChange}>
+            <option value="">— select region —</option>
+            {#each formRegions as r}
+              <option value={r.id}>{r.name}</option>
+            {/each}
+          </select>
         </div>
+
+        {#if formRegionId}
+          <div class="form-group">
+            <label class="form-label">Country</label>
+            <select class="input-field" bind:value={formCountryId} on:change={onFormCountryChange}>
+              <option value="">— select country —</option>
+              {#each formCountries as c}
+                <option value={c.id}>{c.name}</option>
+              {/each}
+            </select>
+          </div>
+        {/if}
+
+        {#if formCountryId}
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <select class="input-field" bind:value={form.city_id}>
+              <option value={null}>— select city —</option>
+              {#each formCities as ci}
+                <option value={ci.id}>{ci.name}{ci.state_name ? ` (${ci.state_name})` : ''}</option>
+              {/each}
+            </select>
+          </div>
+        {/if}
 
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" on:click={closeModal}>Cancel</button>

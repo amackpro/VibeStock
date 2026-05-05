@@ -59,8 +59,10 @@ export const api = {
     login:    (creds)  => request('POST', '/auth/login',    creds),
     register: (data)   => request('POST', '/auth/register', data),
     orgs:     ()       => request('GET',  '/auth/orgs'),
-    sendOtp:   (email)       => request('POST', '/auth/send-otp',   { email }),
-    verifyOtp: (email, otp) => request('POST', '/auth/verify-otp', { email, otp }),
+    sendOtp:       (email)       => request('POST', '/auth/send-otp',   { email }),
+    verifyOtp:     (email, otp) => request('POST', '/auth/verify-otp', { email, otp }),
+    checkEmail:    (email)       => request('GET',  `/auth/check-email?email=${encodeURIComponent(email)}`),
+    checkUsername: (username)    => request('GET',  `/auth/check-username?username=${encodeURIComponent(username)}`),
   },
 
   dashboard: {

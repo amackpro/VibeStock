@@ -156,7 +156,7 @@ pub struct StockMovement {
     pub quantity: i32,
     pub reference: Option<String>,
     pub notes: Option<String>,
-    pub performed_by: Uuid,
+    pub performed_by: Option<Uuid>,  // nullable: SET NULL when user is deleted
     pub created_at: DateTime<Utc>,
 }
 
@@ -173,8 +173,8 @@ pub struct StockMovementWithDetails {
     pub quantity: i32,
     pub reference: Option<String>,
     pub notes: Option<String>,
-    pub performed_by: Uuid,
-    pub performed_by_name: String,
+    pub performed_by: Option<Uuid>,  // nullable: SET NULL when user is deleted
+    pub performed_by_name: String,   // COALESCE to "Deleted User"
     pub created_at: DateTime<Utc>,
 }
 
@@ -191,7 +191,7 @@ pub enum UserRole {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct User {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub tenant_id: Option<Uuid>,  // nullable: ON DELETE SET NULL when tenant is deleted
     pub is_global_admin: bool,
     pub username: String,
     pub email: String,
@@ -207,7 +207,7 @@ pub struct User {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct UserWithTenant {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub tenant_id: Option<Uuid>,  // nullable: ON DELETE SET NULL when tenant is deleted
     pub tenant_name: Option<String>,
     pub is_global_admin: bool,
     pub username: String,
@@ -221,6 +221,14 @@ pub struct UserWithTenant {
 
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────
 
+/// One data point in the 7-day movement chart: a calendar date + total quantity moved.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DayMovements {
+    /// "YYYY-MM-DD" string so JSON serialisation is simple on the frontend
+    pub day: String,
+    pub total_quantity: i64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardStats {
     pub total_products: i64,
@@ -231,6 +239,9 @@ pub struct DashboardStats {
     pub total_stock_value: f64,
     pub total_movements_today: i64,
     pub recent_activity: Vec<StockMovementWithDetails>,
+    /// Aggregated daily movement volume for the last 7 days (used by the chart).
+    /// Only days with at least one movement are included; the frontend fills zeros.
+    pub movements_by_day: Vec<DayMovements>,
 }
 
 // ─── Geography ────────────────────────────────────────────────────────────────

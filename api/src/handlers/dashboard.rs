@@ -2,7 +2,7 @@ use axum::{extract::{Extension, State}, Json};
 use uuid::Uuid;
 
 use crate::AppState;
-use shared::{AppResult, DashboardStats};
+use shared::{AppResult, DashboardStats, DayMovements};
 
 /// GET /api/dashboard/stats — returns 6 inventory KPI aggregates
 pub async fn get_stats(
@@ -34,13 +34,28 @@ pub async fn get_stats(
     let recent_activity = sqlx::query_as::<_, shared::StockMovementWithDetails>(
         "SELECT m.id, m.tenant_id, m.product_id, p.name as product_name, p.sku as product_sku,
                 m.movement_type::text as movement_type, m.quantity, m.reference, m.notes,
-                m.performed_by, u.full_name as performed_by_name, m.created_at
+                m.performed_by, COALESCE(u.full_name, 'Deleted User') as performed_by_name,
+                m.created_at
          FROM stock_movements m
          JOIN products p ON m.product_id = p.id
-         JOIN users u ON m.performed_by = u.id
+         LEFT JOIN users u ON m.performed_by = u.id
          WHERE m.tenant_id = $1
          ORDER BY m.created_at DESC
          LIMIT 10"
+    )
+    .bind(tenant_id)
+    .fetch_all(&state.db)
+    .await?;
+
+    // 7-day aggregated movement volume for the chart
+    let movements_by_day = sqlx::query_as::<_, DayMovements>(
+        "SELECT TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day,
+                COALESCE(SUM(quantity), 0)::BIGINT AS total_quantity
+         FROM stock_movements
+         WHERE tenant_id = $1
+           AND created_at >= CURRENT_DATE - INTERVAL '6 days'
+         GROUP BY DATE(created_at)
+         ORDER BY DATE(created_at) ASC"
     )
     .bind(tenant_id)
     .fetch_all(&state.db)
@@ -55,5 +70,6 @@ pub async fn get_stats(
         total_stock_value,
         total_movements_today,
         recent_activity,
+        movements_by_day,
     }))
 }

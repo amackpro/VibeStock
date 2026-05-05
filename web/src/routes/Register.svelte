@@ -28,6 +28,45 @@
   let otpVerified = false;   // true only after backend confirms the code
   let otpChecking = false;   // spinner while verifying
 
+  // ── Live availability state ───────────────────────────────────────────────────
+  // 'idle' | 'checking' | 'available' | 'taken' | 'error'
+  let usernameStatus = 'idle';
+  let emailStatus    = 'idle';
+  let usernameTimer  = null;
+  let emailTimer     = null;
+
+  function onUsernameInput() {
+    usernameStatus = 'idle';
+    clearTimeout(usernameTimer);
+    if (username.length < 3) return;
+    usernameStatus = 'checking';
+    usernameTimer = setTimeout(async () => {
+      try {
+        const res = await api.auth.checkUsername(username.trim());
+        usernameStatus = res.available ? 'available' : 'taken';
+      } catch (_) {
+        usernameStatus = 'error';
+      }
+    }, 500);
+  }
+
+  function onEmailInput() {
+    emailStatus = 'idle';
+    clearTimeout(emailTimer);
+    // Reset OTP if they change the email after sending
+    if (otpSent) { otpSent = false; otp = ''; otpError = ''; otpVerified = false; }
+    if (!email.includes('@')) return;
+    emailStatus = 'checking';
+    emailTimer = setTimeout(async () => {
+      try {
+        const res = await api.auth.checkEmail(email.trim());
+        emailStatus = res.available ? 'available' : 'taken';
+      } catch (_) {
+        emailStatus = 'error';
+      }
+    }, 600);
+  }
+
   // ── UI state ──────────────────────────────────────────────────────────────────
   let loading         = false;
   let error           = '';
@@ -100,6 +139,11 @@
       error = 'Please enter your email address first';
       return;
     }
+    if (emailStatus === 'taken') {
+      otpError = 'This email is already registered. Please log in instead.';
+      return;
+    }
+    if (emailStatus === 'checking') return; // wait for check to finish
     otpSending = true;
     otpError   = '';
     error      = '';
@@ -109,6 +153,9 @@
       toastStore.show('OTP sent! Check your inbox.', 'success');
     } catch (e) {
       otpError = e.message || 'Failed to send OTP';
+      if (e.message && e.message.toLowerCase().includes('already registered')) {
+        emailStatus = 'taken';
+      }
     } finally {
       otpSending = false;
     }
@@ -327,10 +374,20 @@
               type="text"
               id="username"
               class="input-field"
+              class:field-available={usernameStatus === 'available'}
+              class:field-taken={usernameStatus === 'taken'}
               placeholder="johndoe"
               bind:value={username}
+              on:input={onUsernameInput}
               on:keydown={handleKeydown}
             />
+            {#if usernameStatus === 'checking'}
+              <span class="field-status-icon"><span class="mini-spinner"></span></span>
+            {:else if usernameStatus === 'available'}
+              <span class="field-status-icon status-ok">✓</span>
+            {:else if usernameStatus === 'taken'}
+              <span class="field-status-icon status-err">✗</span>
+            {/if}
           </div>
         </div>
 
@@ -349,8 +406,10 @@
                 id="email"
                 class="input-field"
                 class:verified={otpSent}
+                class:field-taken={emailStatus === 'taken'}
                 placeholder="john@example.com"
                 bind:value={email}
+                on:input={onEmailInput}
                 on:keydown={handleKeydown}
                 disabled={otpSent}
               />
@@ -360,7 +419,7 @@
                 Resend
               </button>
             {:else}
-              <button type="button" class="otp-send-btn" on:click={handleSendOtp} disabled={otpSending || !serverConnected}>
+              <button type="button" class="otp-send-btn" on:click={handleSendOtp} disabled={otpSending || !serverConnected || emailStatus === 'taken' || emailStatus === 'checking'}>
                 {#if otpSending}
                   <span class="mini-spinner"></span>
                 {:else}
@@ -369,6 +428,12 @@
               </button>
             {/if}
           </div>
+
+          {#if emailStatus === 'taken'}
+            <p class="field-taken-msg">This email is already registered. <a href="#/" on:click|preventDefault={() => navigate('/')}>Log in instead?</a></p>
+          {:else if emailStatus === 'available'}
+            <p class="field-ok-msg">✓ Email is available</p>
+          {/if}
 
           {#if otpError}
             <p class="otp-error">{otpError}</p>
@@ -759,6 +824,36 @@
     font-size: 0.78rem;
     color: var(--text-muted);
     font-style: italic;
+  }
+
+  .field-available { border-color: #22c55e !important; }
+  .field-taken     { border-color: var(--accent-danger) !important; }
+
+  .field-status-icon {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .status-ok  { color: #22c55e; }
+  .status-err { color: var(--accent-danger); }
+
+  .field-taken-msg {
+    margin-top: 5px;
+    font-size: 0.8rem;
+    color: var(--accent-danger);
+  }
+
+  .field-taken-msg a { color: var(--accent-danger); font-weight: 600; }
+
+  .field-ok-msg {
+    margin-top: 5px;
+    font-size: 0.8rem;
+    color: #22c55e;
   }
 
   /* ── OTP email row ───────────────────────────────────────────────────────── */

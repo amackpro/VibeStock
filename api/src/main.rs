@@ -26,7 +26,7 @@ use api::{
     config::Config,
     db,
     handlers::{
-        auth_handler::{health, list_orgs, login, register, send_otp, verify_otp},
+        auth_handler::{check_email, check_username, health, list_orgs, login, register, send_otp, verify_otp},
         categories::{create_category, delete_category, get_category, list_categories, update_category},
         dashboard::get_stats,
         geography::{
@@ -66,7 +66,20 @@ async fn main() -> anyhow::Result<()> {
                 let _ = sqlx::query("DROP SCHEMA public CASCADE; CREATE SCHEMA public;").execute(&pool).await;
             }
             
-            if let Err(e) = sqlx::migrate!("./migrations").run(&pool).await {
+            // Sync checksums so that editing a migration file during development
+            // (e.g. after git reset + rework) does not block startup.
+            let migrator = sqlx::migrate!("./migrations");
+            for m in migrator.migrations.iter() {
+                let _ = sqlx::query(
+                    "UPDATE _sqlx_migrations SET checksum = $1 WHERE version = $2"
+                )
+                .bind(m.checksum.as_ref())
+                .bind(m.version)
+                .execute(&pool)
+                .await;
+            }
+
+            if let Err(e) = migrator.run(&pool).await {
                 tracing::warn!("Failed to apply migrations: {}", e);
             } else {
                 tracing::info!("✅ Migrations applied");
@@ -139,8 +152,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/auth/login",      post(login))
         .route("/auth/register",   post(register))
         .route("/auth/orgs",       get(list_orgs))
-        .route("/auth/send-otp",   post(send_otp))
-        .route("/auth/verify-otp", post(verify_otp))
+        .route("/auth/send-otp",       post(send_otp))
+        .route("/auth/verify-otp",     post(verify_otp))
+        .route("/auth/check-email",    get(check_email))
+        .route("/auth/check-username", get(check_username))
         .route("/ws",              get(ws_handler))
         .route("/geography/regions",                  get(list_regions))
         .route("/geography/regions/:id/countries",    get(list_countries_by_region))
